@@ -95,8 +95,10 @@ import com.github.zly2006.zhihu.navigation.OnlineHistory
 import com.github.zly2006.zhihu.navigation.TopLevelDestination
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.theme.ELDERLY_MODE_PREFERENCE_KEY
 import com.github.zly2006.zhihu.theme.ThemeManager
 import com.github.zly2006.zhihu.theme.ThemeMode
+import com.github.zly2006.zhihu.theme.rememberSystemElderlyModeEnabled
 import com.github.zly2006.zhihu.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
@@ -129,6 +131,7 @@ const val APPEARANCE_SETTINGS_WEBVIEW_FONT_TAG = "appearanceSettings.webViewFont
 const val APPEARANCE_SETTINGS_WEBVIEW_OPTIONS_TAG = "appearanceSettings.webViewOptions"
 const val APPEARANCE_SETTINGS_BOTTOM_BAR_SECTION_KEY = "appearanceSettings.bottomBarSection"
 const val APPEARANCE_SETTINGS_COLLECTION_DIRECT_BROWSE_TAG = "appearanceSettings.collectionDirectBrowse"
+const val APPEARANCE_SETTINGS_ELDERLY_MODE_TAG = "appearanceSettings.elderlyMode"
 
 const val START_DESTINATION_PREFERENCE_KEY = "startDestination"
 const val BOTTOM_BAR_ITEMS_PREFERENCE_KEY = "bottom_bar_items"
@@ -261,7 +264,7 @@ internal fun shouldShowAccountHistoryShortcut(
 /**
  * 外观与阅读体验设置页。
  *
- * 这里集中管理主题、字号/行高、信息流样式、文章页行为、底部导航栏、分享、搜索和技术性导航开关。页面支持通过 [setting]
+ * 这里集中管理主题、老年模式、字号/行高、信息流样式、文章页行为、底部导航栏、分享、搜索和技术性导航开关。页面支持通过 [setting]
  * 跳入指定设置项并高亮滚动到位，因此新增设置时应提供稳定的 `settingKey`，必要时也补充 test tag。
  *
  * 底部导航栏相关设置会影响 [com.github.zly2006.zhihu.ui.ZhihuMain] 的主壳状态；页面退出时必须通过 [onExit]
@@ -563,6 +566,32 @@ fun AppearanceSettingsScreen(
             SettingItemGroup(
                 title = "阅读",
             ) {
+                val systemElderlyMode = rememberSystemElderlyModeEnabled()
+                var elderlyMode by remember(systemElderlyMode) {
+                    mutableStateOf(settings.getBoolean(ELDERLY_MODE_PREFERENCE_KEY, systemElderlyMode))
+                }
+                SettingItemWithSwitch(
+                    modifier = Modifier.testTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG),
+                    title = { Text("老年模式") },
+                    description = {
+                        Text(
+                            if (systemElderlyMode) {
+                                "已跟随系统老年模式默认打开，放大界面文字。也可手动开关。"
+                            } else {
+                                "系统老年模式开启时默认打开，放大界面文字。也可手动开关。"
+                            },
+                        )
+                    },
+                    checked = elderlyMode,
+                    onCheckedChange = {
+                        elderlyMode = it
+                        settings.putBoolean(ELDERLY_MODE_PREFERENCE_KEY, it)
+                    },
+                    settingKey = ELDERLY_MODE_PREFERENCE_KEY,
+                    highlightedKey = settingKey,
+                    bringIntoViewRequester = requesterFor(ELDERLY_MODE_PREFERENCE_KEY),
+                )
+
                 var fontSize by remember { mutableIntStateOf(settings.getInt(PREF_FONT_SIZE, 100)) }
                 SettingItem(
                     title = { Text("字号") },

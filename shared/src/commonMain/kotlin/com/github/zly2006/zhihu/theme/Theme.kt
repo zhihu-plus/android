@@ -22,7 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.materialkolor.dynamicColorScheme
 
 private val DarkColorScheme = darkColorScheme(
@@ -73,11 +76,24 @@ fun ZhihuTheme(
 
     PlatformSystemBarEffect(darkTheme)
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    val elderlyModeEnabled = rememberElderlyModeEnabled()
+    val density = LocalDensity.current
+    val themedDensity = if (elderlyModeEnabled) {
+        Density(
+            density = density.density,
+            fontScale = density.fontScale * ELDERLY_MODE_FONT_SCALE,
+        )
+    } else {
+        density
+    }
+
+    CompositionLocalProvider(LocalDensity provides themedDensity) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content,
+        )
+    }
 }
 
 @Composable
