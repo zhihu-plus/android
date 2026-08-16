@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
@@ -93,6 +94,7 @@ import com.github.zly2006.zhihu.reading.ReadingQueueSourceRegistry
 import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.test.setScreenContent
+import com.github.zly2006.zhihu.ui.ARTICLE_AUTHOR_FOLLOW_TAG
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
 import com.github.zly2006.zhihu.ui.ArticleScreen
@@ -181,6 +183,28 @@ class ArticleScreenInstrumentedTest {
         composeRule.onNodeWithText("离线作者").assertIsDisplayed()
         composeRule.onNodeWithText("IP属地：上海").assertExists()
         composeRule.onNodeWithText("第 1 段离线正文", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun unreadAuthorShowsFollowActionOnHeader() {
+        setArticleScreen()
+        composeRule.onNodeWithTag(ARTICLE_AUTHOR_FOLLOW_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("关注").assertIsDisplayed()
+    }
+
+    @Test
+    fun followedAuthorShowsFollowedLabelOnHeader() {
+        setArticleScreen(authorIsFollowing = true)
+        composeRule.onNodeWithTag(ARTICLE_AUTHOR_FOLLOW_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("已关注").assertIsDisplayed()
+    }
+
+    @Test
+    fun ownContentHidesFollowAction() {
+        setArticleScreen(authorIsSelf = true)
+        composeRule.onNodeWithTag(ARTICLE_AUTHOR_FOLLOW_TAG).assertDoesNotExist()
+        composeRule.onNodeWithText("关注").assertDoesNotExist()
+        composeRule.onNodeWithText("已关注").assertDoesNotExist()
     }
 
     @Test
@@ -1615,7 +1639,10 @@ class ArticleScreenInstrumentedTest {
         assertTrue(preferences.getFloat("buttonSkipAnswer-x", Float.NaN) > rootWidth / 2)
     }
 
-    private fun setArticleScreen() {
+    private fun setArticleScreen(
+        authorIsFollowing: Boolean = false,
+        authorIsSelf: Boolean = false,
+    ) {
         val viewModel = ArticleViewModel(
             article = ARTICLE,
             httpClient = null,
@@ -1625,6 +1652,8 @@ class ArticleScreenInstrumentedTest {
             viewModel.authorName = "离线作者"
             viewModel.authorId = "offline-author-id"
             viewModel.authorUrlToken = "offline-author"
+            viewModel.authorIsFollowing = authorIsFollowing
+            viewModel.authorIsSelf = authorIsSelf
             viewModel.content = (1..20).joinToString("\n\n") { index ->
                 "第 $index 段离线正文，用于 ArticleScreen instrumented test。"
             }

@@ -284,6 +284,18 @@ class FeedDisplayFilterPipelineTest {
     }
 
     @Test
+    fun contentDetailIncludeRequestsAuthorFollowing() {
+        assertContains(
+            zhihuContentDetailInclude(Article(type = ArticleType.Answer, id = 1)),
+            "author.is_following",
+        )
+        assertContains(
+            zhihuContentDetailInclude(Article(type = ArticleType.Article, id = 1)),
+            "author.is_following",
+        )
+    }
+
+    @Test
     fun keepsAnswerItemsWhenSnapshotQuestionAuthorIsAllowedAndSkipsDetailFallback() = runTest {
         val fixture = fixture()
         fixture.database.blockedQuestionAuthorDao().insertUser(

@@ -69,6 +69,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -96,6 +97,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -155,6 +157,7 @@ import kotlin.math.max
 
 private const val SCROLL_THRESHOLD = 10 // 滑动阈值，单位为dp
 private val ScrollThresholdDp = SCROLL_THRESHOLD.dp
+const val ARTICLE_AUTHOR_FOLLOW_TAG = "article_author_follow"
 
 /**
  * 文章/回答详情页。
@@ -435,63 +438,77 @@ fun ArticleScreen(
                                     modifier = Modifier
                                         .padding(if (expanded) PaddingValues(vertical = 16.dp) else PaddingValues(top = 2.dp, bottom = 8.dp))
                                         .padding(end = 16.dp)
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            navigator.onNavigate(
-                                                com.github.zly2006.zhihu.navigation.Person(
-                                                    id = viewModel.authorId,
-                                                    urlToken = viewModel.authorUrlToken,
-                                                    name = viewModel.authorName,
-                                                ),
-                                            )
-                                        },
+                                        .fillMaxWidth(),
                                 ) {
-                                    if (viewModel.authorAvatarSrc.isNotEmpty()) {
-                                        AsyncImage(
-                                            model = viewModel.authorAvatarSrc,
-                                            contentDescription = "作者头像",
-                                            modifier = Modifier
-                                                .size(if (expanded) 40.dp else 20.dp)
-                                                .clip(CircleShape),
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(if (expanded) 40.dp else 20.dp)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(if (expanded) 8.dp else 4.dp))
-
-                                    Column(
-                                        modifier = Modifier.weight(1f),
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                navigator.onNavigate(
+                                                    com.github.zly2006.zhihu.navigation.Person(
+                                                        id = viewModel.authorId,
+                                                        urlToken = viewModel.authorUrlToken,
+                                                        name = viewModel.authorName,
+                                                    ),
+                                                )
+                                            },
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = viewModel.authorName,
-                                                style = if (expanded) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelMedium,
-                                                color = if (expanded) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f, fill = false),
+                                        if (viewModel.authorAvatarSrc.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = viewModel.authorAvatarSrc,
+                                                contentDescription = "作者头像",
+                                                modifier = Modifier
+                                                    .size(if (expanded) 40.dp else 20.dp)
+                                                    .clip(CircleShape),
                                             )
-                                            if (viewModel.authorBadge != null) {
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                AuthorBadge(
-                                                    badge = viewModel.authorBadge,
-                                                    compact = !expanded,
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(if (expanded) 40.dp else 20.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(if (expanded) 8.dp else 4.dp))
+
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = viewModel.authorName,
+                                                    style = if (expanded) MaterialTheme.typography.titleSmall else MaterialTheme.typography.labelMedium,
+                                                    color = if (expanded) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.weight(1f, fill = false),
+                                                )
+                                                if (viewModel.authorBadge != null) {
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    AuthorBadge(
+                                                        badge = viewModel.authorBadge,
+                                                        compact = !expanded,
+                                                    )
+                                                }
+                                            }
+                                            if (viewModel.authorBio.isNotEmpty() && expanded) {
+                                                Text(
+                                                    text = viewModel.authorBio,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
                                         }
-                                        if (viewModel.authorBio.isNotEmpty() && expanded) {
-                                            Text(
-                                                text = viewModel.authorBio,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
+                                    }
+                                    if (viewModel.canFollowAuthor) {
+                                        ArticleAuthorFollowButton(
+                                            following = viewModel.authorIsFollowing,
+                                            changing = viewModel.authorFollowChanging,
+                                            compact = !expanded,
+                                            onClick = { viewModel.toggleAuthorFollow(environment) },
+                                        )
                                     }
                                 }
                             },
@@ -824,40 +841,56 @@ fun ArticleScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        navigator.onNavigate(
-                                            com.github.zly2006.zhihu.navigation.Person(
-                                                id = viewModel.authorId,
-                                                urlToken = viewModel.authorUrlToken,
-                                                name = viewModel.authorName,
-                                            ),
-                                        )
-                                    }.padding(vertical = 8.dp),
+                                    .padding(vertical = 8.dp),
                             ) {
-                                if (viewModel.authorAvatarSrc.isNotBlank()) {
-                                    AsyncImage(
-                                        model = viewModel.authorAvatarSrc,
-                                        contentDescription = "作者头像",
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape),
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            navigator.onNavigate(
+                                                com.github.zly2006.zhihu.navigation.Person(
+                                                    id = viewModel.authorId,
+                                                    urlToken = viewModel.authorUrlToken,
+                                                    name = viewModel.authorName,
+                                                ),
+                                            )
+                                        },
+                                ) {
+                                    if (viewModel.authorAvatarSrc.isNotBlank()) {
+                                        AsyncImage(
+                                            model = viewModel.authorAvatarSrc,
+                                            contentDescription = "作者头像",
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape),
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(24.dp)
+                                                .clip(CircleShape)
+                                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = viewModel.authorName,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = viewModel.authorName,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                if (viewModel.canFollowAuthor) {
+                                    ArticleAuthorFollowButton(
+                                        following = viewModel.authorIsFollowing,
+                                        changing = viewModel.authorFollowChanging,
+                                        compact = false,
+                                        onClick = { viewModel.toggleAuthorFollow(environment) },
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(8.dp))
                         }
@@ -1309,4 +1342,29 @@ fun ArticleScreen(
             viewModel.exportToImageWithComments(environment, commentCount, includeAppAttribution, onComplete)
         },
     )
+}
+
+@Composable
+private fun ArticleAuthorFollowButton(
+    following: Boolean,
+    changing: Boolean,
+    compact: Boolean,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = !changing,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+        modifier = Modifier.testTag(ARTICLE_AUTHOR_FOLLOW_TAG),
+    ) {
+        Text(
+            text = if (following) "已关注" else "关注",
+            style = if (compact) {
+                MaterialTheme.typography.labelSmall
+            } else {
+                MaterialTheme.typography.labelLarge
+            },
+            maxLines = 1,
+        )
+    }
 }
