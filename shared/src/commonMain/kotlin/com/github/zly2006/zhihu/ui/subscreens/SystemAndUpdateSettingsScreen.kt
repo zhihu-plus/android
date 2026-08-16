@@ -471,7 +471,7 @@ fun SystemAndUpdateSettingsScreen(
                     modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG),
                     title = { Text("启用本地存档") },
                     description = {
-                        Text("开启后按下方保存策略写入本机 SQLite。不需要服务器，也可以和存档服务器同时开启。默认关闭。")
+                        Text("提前把问答留在本机，避免打开时只剩「没有知识存在的荒原」。开启后按下方保存策略写入本机 SQLite。不需要服务器，也可以和存档服务器同时开启。默认关闭。")
                     },
                     checked = localArchiveEnabled,
                     onCheckedChange = {
