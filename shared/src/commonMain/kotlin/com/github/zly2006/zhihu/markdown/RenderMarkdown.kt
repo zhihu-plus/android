@@ -120,8 +120,9 @@ fun RenderImage(
         AsyncImage(
             model = rememberMarkdownImageModel(data.url),
             contentDescription = data.altText,
+            contentScale = ContentScale.FillWidth,
             modifier = modifier
-                .fillMaxWidth(0.8f)
+                .fillMaxWidth()
                 .then(
                     if (imageAspectRatio != null) {
                         Modifier.aspectRatio(imageAspectRatio)
