@@ -60,6 +60,7 @@ import com.github.zly2006.zhihu.util.decodeZhidaStreamErrorMessage
 import com.github.zly2006.zhihu.util.mergeSummaryChunk
 import com.github.zly2006.zhihu.util.parseZhidaSsePayload
 import com.github.zly2006.zhihu.util.prepareArticleExportComment
+import com.github.zly2006.zhihu.util.raiseForStatus
 import com.github.zly2006.zhihu.util.serializeZhidaSummaryRequest
 import com.github.zly2006.zhihu.util.twoDigitString
 import io.ktor.client.HttpClient
@@ -108,6 +109,11 @@ class ArticleViewModel(
     var authorBio by mutableStateOf("")
     var authorAvatarSrc by mutableStateOf("")
     var authorBadge by mutableStateOf<OfficialBadge?>(null)
+    var authorIsFollowing by mutableStateOf(false)
+    var authorIsSelf by mutableStateOf(false)
+    var authorFollowChanging by mutableStateOf(false)
+    val canFollowAuthor: Boolean
+        get() = authorUrlToken.isNotBlank() && !authorIsSelf
     var content by mutableStateOf("")
     var attachment by mutableStateOf<JsonElement?>(null)
     var voteUpCount by mutableIntStateOf(0)
@@ -197,7 +203,11 @@ class ArticleViewModel(
         val authorName: String,
         val authorBio: String,
         val authorAvatarUrl: String,
+        val authorId: String = "",
+        val authorUrlToken: String = "",
         val authorBadge: OfficialBadge? = null,
+        val authorIsFollowing: Boolean = false,
+        val authorIsSelf: Boolean = false,
         val content: String,
         val voteUpCount: Int,
         val commentCount: Int,
@@ -218,7 +228,11 @@ class ArticleViewModel(
         authorName = authorName,
         authorBio = authorBio,
         authorAvatarUrl = authorAvatarSrc,
+        authorId = authorId,
+        authorUrlToken = authorUrlToken,
         authorBadge = authorBadge,
+        authorIsFollowing = authorIsFollowing,
+        authorIsSelf = authorIsSelf,
         content = content,
         voteUpCount = voteUpCount,
         commentCount = commentCount,
@@ -257,6 +271,8 @@ class ArticleViewModel(
                             authorName = answer.author.name
                             authorId = answer.author.id
                             authorUrlToken = answer.author.urlToken
+                            authorIsFollowing = answer.author.isFollowing
+                            authorIsSelf = answer.isMine
                             content = applySegmentInfosToHtml(
                                 content = answer.content,
                                 segmentInfos = answer.segmentInfos,
@@ -348,6 +364,8 @@ class ArticleViewModel(
                             commentCount = article.commentCount
                             authorId = article.author.id
                             authorUrlToken = article.author.urlToken
+                            authorIsFollowing = article.author.isFollowing
+                            authorIsSelf = article.isMine
                             authorName = article.author.name
                             authorBio = article.author.headline
                             authorAvatarSrc = article.author.avatarUrl
@@ -592,6 +610,30 @@ class ArticleViewModel(
                 )
             }
             loadCollections(environment)
+        }
+    }
+
+    fun toggleAuthorFollow(environment: ZhihuApiEnvironment) {
+        val token = authorUrlToken
+        if (!canFollowAuthor || authorFollowChanging) return
+        val nextFollowing = !authorIsFollowing
+        viewModelScope.launch {
+            authorFollowChanging = true
+            try {
+                val endpoint = "https://www.zhihu.com/api/v4/members/$token/followers"
+                val response = if (nextFollowing) {
+                    environment.postSigned(endpoint)
+                } else {
+                    environment.deleteSigned(endpoint)
+                }
+                response.raiseForStatus()
+                authorIsFollowing = nextFollowing
+            } catch (e: Exception) {
+                Log.e("ArticleViewModel", "Toggle author follow failed", e)
+                userMessages.showShortMessage("${if (nextFollowing) "关注" else "取消关注"}失败：${e.message}")
+            } finally {
+                authorFollowChanging = false
+            }
         }
     }
 

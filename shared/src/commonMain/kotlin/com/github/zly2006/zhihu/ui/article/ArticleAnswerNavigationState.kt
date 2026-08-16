@@ -70,6 +70,10 @@ internal class ArticleAnswerNavigationState(
         viewModel.authorName = pending.authorName
         viewModel.authorBio = pending.authorBio
         viewModel.authorAvatarSrc = pending.authorAvatarUrl
+        viewModel.authorId = pending.authorId
+        viewModel.authorUrlToken = pending.authorUrlToken
+        viewModel.authorIsFollowing = pending.authorIsFollowing
+        viewModel.authorIsSelf = pending.authorIsSelf
         viewModel.content = pending.content
         viewModel.voteUpCount = pending.voteUpCount
         viewModel.commentCount = pending.commentCount
