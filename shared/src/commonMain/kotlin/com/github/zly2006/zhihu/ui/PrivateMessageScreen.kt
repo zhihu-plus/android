@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -73,6 +74,8 @@ import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
 import com.github.zly2006.zhihu.util.formatRelativeTime
 import com.github.zly2006.zhihu.viewmodel.PrivateMessageViewModel
 import kotlinx.coroutines.launch
+
+const val PRIVATE_MESSAGE_BODY_TAG_PREFIX = "private_message_body_"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -254,11 +257,15 @@ private fun PrivateMessageBubble(
                     MaterialTheme.colorScheme.primaryContainer
                 },
             ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                )
+                SelectionContainer {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .testTag("$PRIVATE_MESSAGE_BODY_TAG_PREFIX${message.stableId}"),
+                    )
+                }
             }
             Text(
                 text = formatRelativeTime(message.createdTime),
