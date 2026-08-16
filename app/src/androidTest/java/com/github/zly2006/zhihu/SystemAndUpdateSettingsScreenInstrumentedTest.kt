@@ -100,6 +100,7 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
             cnDownloadUrl = null,
         )
         val navigator = setUpScreen()
+        val scrollContainer = scrollContainer()
 
         waitUntilDisplayed(hasText("新版本：\n9.9.9"))
         waitUntilDisplayed(hasText("更新内容"))
@@ -110,12 +111,15 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
             preferences.getString(SKIPPED_VERSION_PREFERENCE_KEY, null) == seededVersion.toString()
         }
         waitUntil(timeoutMillis = 5_000) { UpdateManager.updateState.value == UpdateState.Latest }
+        // 跳过横幅后，检查按钮在存档等设置下方，必须先滚进视口再断言可见。
+        scrollContainer.performScrollToNode(hasText("已经是最新版本"))
         composeRule.onNodeWithText("已经是最新版本").assertIsDisplayed()
 
         // Tapping the "already latest" button must only clear the locally-seeded Latest state back
         // to NoUpdate. The test intentionally does not tap the real network-backed check button.
         composeRule.onNodeWithText("已经是最新版本").performClick()
         waitUntil(timeoutMillis = 5_000) { UpdateManager.updateState.value == UpdateState.NoUpdate }
+        scrollContainer.performScrollToNode(hasText("检查更新"))
         composeRule.onNodeWithText("检查更新").assertIsDisplayed()
 
         // Back navigation is part of the same screen contract, so one final click proves the shared
@@ -135,7 +139,7 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         setUpScreen()
         val scrollContainer = scrollContainer()
 
-        waitUntilDisplayed(hasText("检查更新"))
+        waitUntilDisplayed(hasText("自动检查更新"))
         scrollContainer.performScrollToNode(hasText("防沉迷提醒"))
         composeRule.onNodeWithText("防沉迷提醒").assertIsDisplayed()
         composeRule.onNode(hasText("关闭") and hasClickAction()).performClick()
