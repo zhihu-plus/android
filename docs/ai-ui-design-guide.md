@@ -123,7 +123,7 @@ URL 解析集中在 `resolveContent()`。支持知乎问题、回答、文章、
 | key/store | 入口 | 主要影响 | 注意 |
 | --- | --- | --- | --- |
 | `githubToken` | GitHub Token | 更新检查 API 限速 | 不要打印或提交真实 token |
-| `enableLocalArchive` | 启用本地存档 | 按本地保存策略写入本机 SQLite | 默认关闭；不需要服务器，可与存档服务器同时开启 |
+| `enableLocalArchive` | 启用本地存档 | 按本地保存策略写入本机 SQLite | 默认关闭；不需要服务器，可与存档服务器同时开启。说明应提到避免内容被删后只剩「没有知识存在的荒原」 |
 | `localArchiveSaveStrategy` | 本地保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅本地存档开启时显示；与服务器策略互不影响 |
 | `enableArchiveServer` | 启用存档服务器 | 按服务器保存策略提交到自建存档服务 | 默认关闭；需同时配置地址和令牌 |
 | `archiveServerSaveStrategy` | 服务器保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅存档服务器开启时显示；与本地策略互不影响 |

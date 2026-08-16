@@ -247,7 +247,7 @@ private val settingsSearchEntries = buildList {
     add(systemEntry("system.checkNightlyUpdates", "检查 Nightly 版本更新", "检查每日构建版本。", "checkNightlyUpdates", listOf("每日构建")))
     add(systemEntry("system.allowTelemetry", "允许发送遥测统计数据", "控制匿名使用统计，默认关闭。", "allowTelemetry", listOf("统计", "隐私", "数据收集", "使用数据")))
     add(systemEntry("system.aigcMarking", "启用 AIGC 标记", "开启后可查看其他用户对内容是否疑似 AIGC 的标记。", AIGC_MARKING_ENABLED_PREFERENCE_KEY, listOf("AI", "AIGC")))
-    add(systemEntry("system.localArchive", "启用本地存档", "按自定义策略把问答写入本机 SQLite，不需要服务器。", LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, listOf("本地备份", "sqlite", "离线存档")))
+    add(systemEntry("system.localArchive", "启用本地存档", "把问答留在本机，避免被删后只剩知识的荒原。不需要服务器。", LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, listOf("本地备份", "sqlite", "离线存档", "荒原")))
     add(systemEntry("system.localArchiveStrategy", "本地保存策略", "加载会保存预取到的问答，阅读只保存打开过的问答，点赞或收藏只在对应操作成功后保存。与服务器策略互不影响。", LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, listOf("存档策略", "加载", "阅读", "点赞", "收藏")))
     add(systemEntry("system.localArchiveImportExport", "导入 / 导出本地存档", "把本机存档导出为 JSON，或从 JSON 导入并按链接去重。", "localArchiveImportExport", listOf("导入存档", "导出存档")))
     add(systemEntry("system.archiveServer", "启用存档服务器", "按自定义策略把问答提交到自建存档服务器。", ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, listOf("备份", "存档", "archive")))
