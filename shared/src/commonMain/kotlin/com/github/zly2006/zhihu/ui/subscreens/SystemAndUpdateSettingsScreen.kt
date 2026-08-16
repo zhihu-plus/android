@@ -87,6 +87,7 @@ import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
 import com.github.zly2006.zhihu.ui.rememberLocalArchiveExporter
 import com.github.zly2006.zhihu.ui.rememberLocalArchiveImporter
+import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_REPO
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderPolicy
 import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
@@ -219,12 +220,12 @@ fun SystemAndUpdateSettingsScreen(
                                     SelectionContainer {
                                         Text(
                                             buildAnnotatedString {
-                                                val prRegex = Regex("https://github.com/zly2006/zhihu-plus-plus/pull/(\\d+)")
+                                                val prRegex = Regex("https://github.com/$ZHIHU_PLUS_PLUS_GITHUB_REPO/pull/(\\d+)")
                                                 var lastIndex = 0
                                                 prRegex.findAll(releaseNotes!!).forEach { matchResult ->
                                                     append(releaseNotes!!.substring(lastIndex, matchResult.range.first))
                                                     val prNumber = matchResult.groupValues[1]
-                                                    withLink(LinkAnnotation.Url("https://github.com/zly2006/zhihu-plus-plus/pull/$prNumber")) {
+                                                    withLink(LinkAnnotation.Url("https://github.com/$ZHIHU_PLUS_PLUS_GITHUB_REPO/pull/$prNumber")) {
                                                         withStyle(
                                                             MaterialTheme.typography.bodyMedium
                                                                 .copy(color = MaterialTheme.colorScheme.primary)
@@ -243,7 +244,7 @@ fun SystemAndUpdateSettingsScreen(
                                     }
                                     Spacer(modifier = Modifier.height(12.dp))
                                     TextButton(
-                                        onClick = { openExternalUrl("https://github.com/zly2006/zhihu-plus-plus/releases") },
+                                        onClick = { openExternalUrl("https://github.com/$ZHIHU_PLUS_PLUS_GITHUB_REPO/releases") },
                                         modifier = Modifier.align(Alignment.End),
                                     ) {
                                         Text("查看完整更新日志")

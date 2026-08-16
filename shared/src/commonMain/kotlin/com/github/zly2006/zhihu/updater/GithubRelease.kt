@@ -26,9 +26,11 @@ import io.ktor.http.HttpHeaders
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-const val ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL = "https://api.github.com/repos/zly2006/zhihu-plus-plus/releases/latest"
-const val ZHIHU_PLUS_PLUS_REDEN_LATEST_RELEASE_URL = "https://redenmc.com/api/zhihu/releases/latest"
-const val ZHIHU_PLUS_PLUS_GITHUB_NIGHTLY_RELEASE_URL = "https://api.github.com/repos/zly2006/zhihu-plus-plus/releases/tags/nightly"
+const val ZHIHU_PLUS_PLUS_GITHUB_REPO = "zhihu-plus/android"
+const val ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL =
+    "https://api.github.com/repos/$ZHIHU_PLUS_PLUS_GITHUB_REPO/releases/latest"
+const val ZHIHU_PLUS_PLUS_GITHUB_NIGHTLY_RELEASE_URL =
+    "https://api.github.com/repos/$ZHIHU_PLUS_PLUS_GITHUB_REPO/releases/tags/nightly"
 
 @Serializable
 data class GithubRelease(
@@ -52,12 +54,12 @@ fun extractGithubReleaseNotes(body: String): String = body
     .substringBefore("\n**Full Changelog**:")
     .trimEnd('\n')
 
+// 旧的 reden 镜像仍返回 zly2006/zhihu-plus-plus 的发布信息，
+// 继续优先请求会让检查更新读到旧仓库，因此正式版也直接走 GitHub。
 suspend fun fetchLatestZhihuRelease(
     client: HttpClient,
     githubToken: String?,
-): GithubRelease = runCatching {
-    client.get(ZHIHU_PLUS_PLUS_REDEN_LATEST_RELEASE_URL).raiseForStatus().body<GithubRelease>()
-}.getOrNull() ?: client
+): GithubRelease = client
     .get(ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL) {
         githubToken?.let { token ->
             headers {

@@ -95,7 +95,7 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         val seededVersion = SchematicVersion.fromString("9.9.9")
         UpdateManager.updateState.value = UpdateState.UpdateAvailable(
             version = seededVersion,
-            releaseNotes = "修复若干设置项细节\nhttps://github.com/zly2006/zhihu-plus-plus/pull/321",
+            releaseNotes = "修复若干设置项细节\nhttps://github.com/zhihu-plus/android/pull/321",
             downloadUrl = "https://example.com/app-lite-debug.apk",
             cnDownloadUrl = null,
         )

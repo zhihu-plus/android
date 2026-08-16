@@ -20,6 +20,7 @@ package com.github.zly2006.zhihu.test
 import android.content.Context
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.notification.ZHIHU_PLUS_PLUS_HOME_NOTIFICATIONS_URL
+import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
 import io.ktor.client.engine.mock.respond
@@ -130,7 +131,7 @@ object ZhihuMockApi {
             """.trimIndent()
         mockJson(
             method = HttpMethod.Get,
-            url = "https://api.github.com/repos/zly2006/zhihu-plus-plus/releases/latest",
+            url = ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL,
             body =
                 """
                 {

@@ -65,4 +65,17 @@ class GithubReleaseTest {
 
         assertEquals("* Added shared updater logic\n* Fixed something", notes)
     }
+
+    @Test
+    fun updateCheckUrlsPointToZhihuPlusAndroidRepo() {
+        assertEquals("zhihu-plus/android", ZHIHU_PLUS_PLUS_GITHUB_REPO)
+        assertEquals(
+            "https://api.github.com/repos/zhihu-plus/android/releases/latest",
+            ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL,
+        )
+        assertEquals(
+            "https://api.github.com/repos/zhihu-plus/android/releases/tags/nightly",
+            ZHIHU_PLUS_PLUS_GITHUB_NIGHTLY_RELEASE_URL,
+        )
+    }
 }
