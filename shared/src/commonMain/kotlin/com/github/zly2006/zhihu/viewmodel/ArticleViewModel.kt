@@ -728,7 +728,14 @@ class ArticleViewModel(
         environment: ArchiveEnvironment,
         trigger: ArchiveSaveTrigger,
     ) {
-        val item = createArchiveItem(exportSourceContent ?: return) ?: return
+        val source = exportSourceContent ?: return
+        val matchesCurrent = when (source) {
+            is DataHolder.Answer -> article.type == ArticleType.Answer && source.id == article.id
+            is DataHolder.Article -> article.type == ArticleType.Article && source.id == article.id
+            else -> false
+        }
+        if (!matchesCurrent) return
+        val item = createArchiveItem(source) ?: return
         viewModelScope.launch(Dispatchers.Default) {
             persistArchive(environment, item, trigger)
         }

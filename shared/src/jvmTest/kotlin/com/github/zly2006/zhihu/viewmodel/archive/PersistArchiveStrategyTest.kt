@@ -81,6 +81,32 @@ class PersistArchiveStrategyTest {
         database.close()
     }
 
+    @Test
+    fun loadedTriggerWritesLocalOnlyWhenServerUsesRead() = runTest {
+        val database = testDatabase("loaded-trigger")
+        val serverPosts = AtomicInteger(0)
+        val environment = StrategyArchiveEnvironment(
+            dao = database.localArchiveDao(),
+            client = recordingClient(serverPosts),
+            localStrategy = ArchiveSaveStrategy.Loaded,
+            serverStrategy = ArchiveSaveStrategy.Read,
+        )
+        val item = requireNotNull(
+            createArchiveItem(
+                type = "answer",
+                title = "预取问答",
+                contentHtml = "<p>这是一段足够长的回答正文，用来通过存档服务器要求的三十字以上长度校验。</p>",
+                questionId = "44",
+                answerId = "55",
+            ),
+        )
+
+        persistArchive(environment, item, ArchiveSaveTrigger.Loaded)
+        assertEquals(1, database.localArchiveDao().count())
+        assertEquals(0, serverPosts.get())
+        database.close()
+    }
+
     private fun recordingClient(serverPosts: AtomicInteger): ArchiveClient = ArchiveClient(
         httpClient = HttpClient(
             MockEngine {

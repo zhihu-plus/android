@@ -191,12 +191,36 @@ abstract class AnswerNavigator(
      */
     open suspend fun prefetchPrevious(currentArticleId: Long) = Unit
 
-    protected fun archiveLoadedAnswer(detail: DataHolder.Answer) {
-        val archiveEnvironment = environment as? ArchiveEnvironment ?: return
-        val item = createArchiveItem(detail) ?: return
-        CoroutineScope(Dispatchers.Default).launch {
-            persistArchive(archiveEnvironment, item, ArchiveSaveTrigger.Loaded)
+    protected suspend fun fetchCachedAnswer(article: Article): CachedAnswerContent? {
+        val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer ?: return null
+        val archiveEnvironment = environment as? ArchiveEnvironment
+        val archiveItem = if (archiveEnvironment != null) createArchiveItem(detail) else null
+        if (archiveEnvironment != null && archiveItem != null) {
+            // 存档写入不能占用导航器互斥锁，否则预取会被本地库和网络拖住。
+            CoroutineScope(Dispatchers.Default).launch {
+                persistArchive(archiveEnvironment, archiveItem, ArchiveSaveTrigger.Loaded)
+            }
         }
+        return CachedAnswerContent(
+            article = article,
+            title = detail.question.title,
+            authorName = detail.author.name,
+            authorBio = detail.author.headline,
+            authorAvatarUrl = detail.author.avatarUrl,
+            authorId = detail.author.id,
+            authorUrlToken = detail.author.urlToken,
+            authorBadge = detail.author.badgeV2.officialBadge(),
+            authorIsFollowing = detail.author.isFollowing,
+            authorIsSelf = detail.isMine,
+            content = detail.content,
+            voteUpCount = detail.voteupCount,
+            commentCount = detail.commentCount,
+            createdAt = detail.createdTime,
+            updatedAt = detail.updatedTime,
+            ipInfo = detail.ipInfo,
+            endorsements = detail.endorsementItems,
+            sourceLabel = sourceName,
+        )
     }
 
     /**
@@ -313,31 +337,6 @@ class QuestionAnswerNavigator(
             )
         }
 
-    private suspend fun fetchCached(article: Article): CachedAnswerContent? {
-        val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer ?: return null
-        archiveLoadedAnswer(detail)
-        return CachedAnswerContent(
-            article = article,
-            title = detail.question.title,
-            authorName = detail.author.name,
-            authorBio = detail.author.headline,
-            authorAvatarUrl = detail.author.avatarUrl,
-            authorId = detail.author.id,
-            authorUrlToken = detail.author.urlToken,
-            authorBadge = detail.author.badgeV2.officialBadge(),
-            authorIsFollowing = detail.author.isFollowing,
-            authorIsSelf = detail.isMine,
-            content = detail.content,
-            voteUpCount = detail.voteupCount,
-            commentCount = detail.commentCount,
-            createdAt = detail.createdTime,
-            updatedAt = detail.updatedTime,
-            ipInfo = detail.ipInfo,
-            endorsements = detail.endorsementItems,
-            sourceLabel = sourceName,
-        )
-    }
-
     private suspend fun ensureDestinationsLocked(
         currentArticleId: Long,
         minimumCount: Int,
@@ -427,7 +426,7 @@ class QuestionAnswerNavigator(
         }
         val article = previousQueue.removeFirstOrNull() ?: return@withLock null
         val cached = try {
-            fetchCached(article)
+            fetchCachedAnswer(article)
         } catch (e: Exception) {
             Log.w("QuestionAnswerNavigator", "Failed to load previous answer content", e)
             null
@@ -454,7 +453,7 @@ class QuestionAnswerNavigator(
         if (previousAnswerContent != null) return@withLock
         val article = previousQueue.firstOrNull() ?: return@withLock
         try {
-            previousAnswerContent = fetchCached(article)
+            previousAnswerContent = fetchCachedAnswer(article)
         } catch (e: Exception) {
             Log.w("QuestionAnswerNavigator", "Failed to pre-load previous answer content", e)
         }
@@ -466,7 +465,7 @@ class QuestionAnswerNavigator(
         val nextDest = destinations.firstOrNull() ?: return@withLock
         if (nextDest.type != ArticleType.Answer) return@withLock
         try {
-            nextAnswerContent = fetchCached(nextDest)
+            nextAnswerContent = fetchCachedAnswer(nextDest)
         } catch (e: Exception) {
             Log.w("QuestionAnswerNavigator", "Failed to pre-load next answer content", e)
         }
@@ -574,35 +573,12 @@ class CollectionAnswerNavigator(
         }
         val article = previousQueue.removeFirstOrNull() ?: return@withLock null
         val cached = try {
-            val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer
-            if (detail != null) {
-                CachedAnswerContent(
-                    article = article,
-                    title = detail.question.title,
-                    authorName = detail.author.name,
-                    authorBio = detail.author.headline,
-                    authorAvatarUrl = detail.author.avatarUrl,
-                    authorId = detail.author.id,
-                    authorUrlToken = detail.author.urlToken,
-                    authorBadge = detail.author.badgeV2.officialBadge(),
-                    authorIsFollowing = detail.author.isFollowing,
-                    authorIsSelf = detail.isMine,
-                    content = detail.content,
-                    voteUpCount = detail.voteupCount,
-                    commentCount = detail.commentCount,
-                    createdAt = detail.createdTime,
-                    updatedAt = detail.updatedTime,
-                    ipInfo = detail.ipInfo,
-                    endorsements = detail.endorsementItems,
-                    sourceLabel = sourceName,
-                )
-            } else {
-                // 加载失败时退回 previousQueue
-                previousQueue.add(0, article)
-                return@withLock null
-            }
+            fetchCachedAnswer(article)
         } catch (e: Exception) {
             Log.w("CollectionAnswerNavigator", "Failed to load previous answer content", e)
+            null
+        }
+        if (cached == null) {
             previousQueue.add(0, article)
             return@withLock null
         }
@@ -615,27 +591,7 @@ class CollectionAnswerNavigator(
         if (previousAnswerContent != null) return@withLock
         val article = previousQueue.firstOrNull() ?: return@withLock
         try {
-            val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer ?: return@withLock
-            previousAnswerContent = CachedAnswerContent(
-                article = article,
-                title = detail.question.title,
-                authorName = detail.author.name,
-                authorBio = detail.author.headline,
-                authorAvatarUrl = detail.author.avatarUrl,
-                authorId = detail.author.id,
-                authorUrlToken = detail.author.urlToken,
-                authorBadge = detail.author.badgeV2.officialBadge(),
-                authorIsFollowing = detail.author.isFollowing,
-                authorIsSelf = detail.isMine,
-                content = detail.content,
-                voteUpCount = detail.voteupCount,
-                commentCount = detail.commentCount,
-                createdAt = detail.createdTime,
-                updatedAt = detail.updatedTime,
-                ipInfo = detail.ipInfo,
-                endorsements = detail.endorsementItems,
-                sourceLabel = sourceName,
-            )
+            previousAnswerContent = fetchCachedAnswer(article)
         } catch (e: Exception) {
             Log.w("CollectionAnswerNavigator", "Failed to pre-load previous answer content", e)
         }
@@ -649,27 +605,7 @@ class CollectionAnswerNavigator(
             prefetchedArticle = queue.removeFirstOrNull()
         }
         try {
-            val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer ?: return@withLock
-            nextAnswerContent = CachedAnswerContent(
-                article = article,
-                title = detail.question.title,
-                authorName = detail.author.name,
-                authorBio = detail.author.headline,
-                authorAvatarUrl = detail.author.avatarUrl,
-                authorId = detail.author.id,
-                authorUrlToken = detail.author.urlToken,
-                authorBadge = detail.author.badgeV2.officialBadge(),
-                authorIsFollowing = detail.author.isFollowing,
-                authorIsSelf = detail.isMine,
-                content = detail.content,
-                voteUpCount = detail.voteupCount,
-                commentCount = detail.commentCount,
-                createdAt = detail.createdTime,
-                updatedAt = detail.updatedTime,
-                ipInfo = detail.ipInfo,
-                endorsements = detail.endorsementItems,
-                sourceLabel = sourceName,
-            )
+            nextAnswerContent = fetchCachedAnswer(article)
         } catch (e: Exception) {
             Log.w("CollectionAnswerNavigator", "Failed to pre-load next answer content", e)
         }
@@ -783,32 +719,6 @@ class PaginationInfoNavigator(
         }
     }
 
-    private suspend fun fetchCached(answerId: Long): CachedAnswerContent? {
-        val dest = Article(id = answerId, type = ArticleType.Answer)
-        val detail = environment.getOrFetchContentDetail(dest) as? DataHolder.Answer ?: return null
-        archiveLoadedAnswer(detail)
-        return CachedAnswerContent(
-            article = dest,
-            title = detail.question.title,
-            authorName = detail.author.name,
-            authorBio = detail.author.headline,
-            authorAvatarUrl = detail.author.avatarUrl,
-            authorId = detail.author.id,
-            authorUrlToken = detail.author.urlToken,
-            authorBadge = detail.author.badgeV2.officialBadge(),
-            authorIsFollowing = detail.author.isFollowing,
-            authorIsSelf = detail.isMine,
-            content = detail.content,
-            voteUpCount = detail.voteupCount,
-            commentCount = detail.commentCount,
-            createdAt = detail.createdTime,
-            updatedAt = detail.updatedTime,
-            ipInfo = detail.ipInfo,
-            endorsements = detail.endorsementItems,
-            sourceLabel = sourceName,
-        )
-    }
-
     override suspend fun loadPrevious(): CachedAnswerContent? = nextQueueMutex.withLock {
         // 如果已预取，直接消费
         val prefetched = previousAnswerContent
@@ -819,7 +729,7 @@ class PaginationInfoNavigator(
         }
         val id = prevQueue.removeFirstOrNull() ?: return@withLock null
         val cached = try {
-            fetchCached(id)
+            fetchCachedAnswer(Article(id = id, type = ArticleType.Answer))
         } catch (e: Exception) {
             Log.w("PaginationInfoNavigator", "Failed to load previous answer content", e)
             null
@@ -856,7 +766,7 @@ class PaginationInfoNavigator(
         ensureNextQueueLocked(1)
         val id = nextQueue.firstOrNull() ?: return@withLock
         try {
-            nextAnswerContent = fetchCached(id)
+            nextAnswerContent = fetchCachedAnswer(Article(id = id, type = ArticleType.Answer))
         } catch (e: Exception) {
             Log.w("PaginationInfoNavigator", "Failed to pre-load next answer content", e)
         }
@@ -866,7 +776,7 @@ class PaginationInfoNavigator(
         if (previousAnswerContent != null) return@withLock
         val id = prevQueue.firstOrNull() ?: return@withLock
         try {
-            previousAnswerContent = fetchCached(id)
+            previousAnswerContent = fetchCachedAnswer(Article(id = id, type = ArticleType.Answer))
         } catch (e: Exception) {
             Log.w("PaginationInfoNavigator", "Failed to pre-load previous answer content", e)
         }
