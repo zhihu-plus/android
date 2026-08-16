@@ -79,7 +79,6 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         preferences
             .edit()
             .putBoolean(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, false)
-            .putBoolean(ALLOW_TELEMETRY_PREFERENCE_KEY, true)
             .putInt(ContinuousUsageReminderManager.KEY_CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES, 0)
             .commit()
         UpdateManager.updateState.value = UpdateState.NoUpdate
@@ -180,7 +179,6 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         preferences
             .edit()
             .putBoolean(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, false)
-            .putBoolean(ALLOW_TELEMETRY_PREFERENCE_KEY, true)
             .commit()
         setUpScreen()
         val scrollContainer = scrollContainer()
@@ -188,7 +186,6 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         waitUntilDisplayed(hasText("自动检查更新"))
         assertFalse(UpdateManager.isAutoCheckEnabled(composeRule.activity))
         assertFalse(preferences.getBoolean(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, true))
-        assertTrue(preferences.getBoolean(ALLOW_TELEMETRY_PREFERENCE_KEY, false))
 
         clickSettingRow("自动检查更新")
         waitUntil(timeoutMillis = 5_000) { UpdateManager.isAutoCheckEnabled(composeRule.activity) }
@@ -196,18 +193,14 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         clickSettingRow("检查 Nightly 版本更新")
         waitUntilBooleanPreference(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, expected = true)
 
-        clickSettingRow("允许发送遥测统计数据")
-        waitUntilBooleanPreference(ALLOW_TELEMETRY_PREFERENCE_KEY, expected = false)
-
         scrollContainer.performVerticalSwipeCycle()
         scrollContainer.performScrollToNode(hasText("Github issue"))
         composeRule.onNodeWithText("Github issue").assertIsDisplayed()
 
-        scrollContainer.performScrollToNode(hasText("允许发送遥测统计数据"))
-        composeRule.onNodeWithText("允许发送遥测统计数据").assertIsDisplayed()
+        scrollContainer.performScrollToNode(hasText("检查 Nightly 版本更新"))
+        composeRule.onNodeWithText("检查 Nightly 版本更新").assertIsDisplayed()
         assertTrue(UpdateManager.isAutoCheckEnabled(composeRule.activity))
         assertTrue(preferences.getBoolean(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, false))
-        assertFalse(preferences.getBoolean(ALLOW_TELEMETRY_PREFERENCE_KEY, true))
     }
 
     @Test
@@ -325,7 +318,6 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
     }.isSuccess
 
     private companion object {
-        const val ALLOW_TELEMETRY_PREFERENCE_KEY = "allowTelemetry"
         const val CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY = "checkNightlyUpdates"
         const val SKIPPED_VERSION_PREFERENCE_KEY = "skippedVersion"
     }

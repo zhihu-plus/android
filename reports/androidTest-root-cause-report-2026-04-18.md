@@ -39,7 +39,7 @@ Representative files:
 Why this matters:
 
 - Nearly all instrumented tests use `createAndroidComposeRule<MainActivity>()`.
-- `MainActivity` runs startup logic before tests replace content: account loading, refresh token flow, telemetry, cleanup jobs, theme init, history init, and app-shell `ZhihuMain`.
+- `MainActivity` runs startup logic before tests replace content: account loading, refresh token flow, cleanup jobs, theme init, history init, and app-shell `ZhihuMain`.
 - `activity.setContent { ... }` replaces UI content, but the Activity instance and its side effects still exist.
 - Any page that depends on `MainActivity`, activity-scoped ViewModels, history storage, nav state, or startup-initialized services is not actually being tested in isolation.
 

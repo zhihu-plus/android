@@ -26,59 +26,10 @@ import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.platform.androidSettingsStore
 import com.github.zly2006.zhihu.util.signZhihuFetchRequest
 import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.Url
-import io.ktor.http.contentType
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import java.security.MessageDigest
 
 fun HttpRequestBuilder.signFetchRequest() {
     signZhihuFetchRequest(AccountData.data.cookies)
-}
-
-@OptIn(DelicateCoroutinesApi::class)
-fun telemetry(context: Context, usage: String) {
-    require(usage in listOf("start", "login")) {
-        "Usage must be either 'start' or 'login', but was '$usage'."
-    }
-    val settings = androidSettingsStore(context)
-    val data = AccountData.loadData(context)
-    if (settings.getBoolean("allowTelemetry", false)) {
-        val versionName = runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull() ?: "unknown"
-        GlobalScope.launch {
-            @OptIn(ExperimentalStdlibApi::class)
-            runCatching {
-                val hash = MessageDigest
-                    .getInstance("MD5")
-                    .apply {
-                        data.self!!
-                            .userType
-                            .toByteArray()
-                            .let(this::update)
-                        data.self.urlToken
-                            ?.toByteArray()
-                            ?.let(this::update)
-                    }.digest(data.self!!.id.toByteArray())
-                    .toHexString()
-                AccountData
-                    .httpClient(context)
-                    .post("https://redenmc.com/api/zhihu/usage?client_hash=$hash&usage=$usage") {
-                        contentType(ContentType.Application.Json)
-                        header(
-                            HttpHeaders.UserAgent,
-                            "Zhihu++/$versionName",
-                        )
-                    }
-            }
-        }
-    }
 }
 
 /**

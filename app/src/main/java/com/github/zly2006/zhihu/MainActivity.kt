@@ -98,7 +98,6 @@ import com.github.zly2006.zhihu.util.ZhihuCredentialRefresher
 import com.github.zly2006.zhihu.util.clearShareImageCache
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.enableEdgeToEdgeCompat
-import com.github.zly2006.zhihu.util.telemetry
 import com.github.zly2006.zhihu.viewmodel.ArticleAnswerSwitchData
 import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.ContentFilterManager
@@ -259,7 +258,6 @@ class MainActivity :
             }
         }
         if (savedInstanceState == null) {
-            telemetry(this, "start")
             if (intent.data != null) {
                 if (intent.data!!.authority == "zhihu-plus.internal") {
                     if (intent.data!!.path == "/error") {
