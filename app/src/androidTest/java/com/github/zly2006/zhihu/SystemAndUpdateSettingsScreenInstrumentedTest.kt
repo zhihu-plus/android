@@ -35,16 +35,20 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.performVerticalSwipeCycle
 import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.test.setScreenContent
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_URL_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SystemAndUpdateSettingsScreen
 import com.github.zly2006.zhihu.updater.SchematicVersion
@@ -243,6 +247,48 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         scrollContainer.performScrollToNode(hasText("导入 / 导出本地存档"))
         composeRule.onNodeWithText("导入 / 导出本地存档").assertIsDisplayed()
         assertFalse(preferences.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
+    }
+
+    @Test
+    fun localAndServerArchiveStrategiesPersistIndependently() {
+        setUpScreen()
+        val scrollContainer = scrollContainer()
+
+        scrollContainer.performScrollToNode(hasText("启用本地存档"))
+        clickSettingRow("启用本地存档")
+        waitUntilBooleanPreference(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG))
+        composeRule.onNodeWithText("本地保存策略").assertIsDisplayed()
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG).performClick()
+        waitUntilDisplayed(hasText("所有点赞的问答"))
+        composeRule.onNode(hasText("所有点赞的问答"), useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 5_000) {
+            preferences.getString(LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, "") == "voted"
+        }
+
+        scrollContainer.performScrollToNode(hasText("存档服务器地址"))
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_URL_TAG).performTextInput("http://192.168.0.10:32100")
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG).performTextInput("local-dev-token")
+        waitUntil(timeoutMillis = 5_000) {
+            preferences.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, "") == "http://192.168.0.10:32100" &&
+                preferences.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "") == "local-dev-token"
+        }
+        scrollContainer.performScrollToNode(hasText("启用存档服务器"))
+        clickSettingRow("启用存档服务器")
+        waitUntilBooleanPreference(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG))
+        composeRule.onNodeWithText("服务器保存策略").assertIsDisplayed()
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG).performClick()
+        waitUntilDisplayed(hasText("所有收藏的问答"))
+        composeRule.onNode(hasText("所有收藏的问答"), useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 5_000) {
+            preferences.getString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, "") == "collected"
+        }
+
+        assertEquals("voted", preferences.getString(LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, ""))
+        assertEquals("collected", preferences.getString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, ""))
     }
 
     private fun setUpScreen() = composeRule.setScreenContent {

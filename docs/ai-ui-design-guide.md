@@ -122,8 +122,10 @@ URL 解析集中在 `resolveContent()`。支持知乎问题、回答、文章、
 | key/store | 入口 | 主要影响 | 注意 |
 | --- | --- | --- | --- |
 | `githubToken` | GitHub Token | 更新检查 API 限速 | 不要打印或提交真实 token |
-| `enableLocalArchive` | 启用本地存档 | 阅读问题/回答/文章后写入本机 SQLite | 默认关闭；不需要服务器，可与存档服务器同时开启 |
-| `enableArchiveServer` | 启用存档服务器 | 阅读问题/回答/文章后提交到自建存档服务 | 默认关闭；需同时配置地址和令牌 |
+| `enableLocalArchive` | 启用本地存档 | 按本地保存策略写入本机 SQLite | 默认关闭；不需要服务器，可与存档服务器同时开启 |
+| `localArchiveSaveStrategy` | 本地保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅本地存档开启时显示；与服务器策略互不影响 |
+| `enableArchiveServer` | 启用存档服务器 | 按服务器保存策略提交到自建存档服务 | 默认关闭；需同时配置地址和令牌 |
+| `archiveServerSaveStrategy` | 服务器保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅存档服务器开启时显示；与本地策略互不影响 |
 | `archiveServerUrl` | 存档服务器地址 | `POST /api/zhihu/items` 的 API 根地址 | 支持 HTTP 局域网地址 |
 | `archiveServerToken` | 存档服务器令牌 | 请求头 `X-Zhihu-Backup-Token` | 不要打印或提交真实 token |
 | `autoCheckUpdates` | 自动检查更新 | 启动后后台检查 | 通过 update runtime 存取 |

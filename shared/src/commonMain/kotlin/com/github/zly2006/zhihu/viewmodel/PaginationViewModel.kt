@@ -29,6 +29,8 @@ import com.github.zly2006.zhihu.data.AigcVoteClient
 import com.github.zly2006.zhihu.data.AigcVoteVoter
 import com.github.zly2006.zhihu.data.ArchiveClient
 import com.github.zly2006.zhihu.data.ArchiveItem
+import com.github.zly2006.zhihu.data.ArchiveSaveStrategy
+import com.github.zly2006.zhihu.data.ArchiveSaveTrigger
 import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
@@ -462,24 +464,33 @@ interface ArchiveEnvironment {
     ): ArchiveClient? = null
 
     fun localArchiveDao(): LocalArchiveDao? = null
+
+    fun localArchiveSaveStrategy(): ArchiveSaveStrategy = ArchiveSaveStrategy.Default
+
+    fun archiveServerSaveStrategy(): ArchiveSaveStrategy = ArchiveSaveStrategy.Default
 }
 
 suspend fun persistArchive(
     environment: ArchiveEnvironment,
     item: ArchiveItem,
+    trigger: ArchiveSaveTrigger = ArchiveSaveTrigger.Read,
 ) {
-    environment.localArchiveDao()?.let { dao ->
-        runCatching {
-            dao.upsertPreservingCreatedAt(item.toLocalArchiveRecord())
-        }.onFailure { error ->
-            if (error is CancellationException) throw error
-            Log.w("Archive", "写入本地存档失败", error)
+    if (environment.localArchiveSaveStrategy().shouldPersist(trigger)) {
+        environment.localArchiveDao()?.let { dao ->
+            runCatching {
+                dao.upsertPreservingCreatedAt(item.toLocalArchiveRecord())
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.w("Archive", "写入本地存档失败", error)
+            }
         }
     }
-    environment.archiveClient()?.let { client ->
-        runCatching { client.saveItem(item) }.onFailure { error ->
-            if (error is CancellationException) throw error
-            Log.w("Archive", "提交存档失败", error)
+    if (environment.archiveServerSaveStrategy().shouldPersist(trigger)) {
+        environment.archiveClient()?.let { client ->
+            runCatching { client.saveItem(item) }.onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.w("Archive", "提交存档失败", error)
+            }
         }
     }
 }

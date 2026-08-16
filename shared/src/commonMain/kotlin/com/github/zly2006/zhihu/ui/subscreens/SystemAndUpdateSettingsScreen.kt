@@ -75,9 +75,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ArchiveSaveStrategy
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
@@ -103,9 +106,11 @@ import zhihu.shared.generated.resources.ic_telegram_24dp
 internal const val CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY = "continuousUsageReminderIntervalMinutes"
 const val SYSTEM_SETTINGS_AIGC_MARKING_TAG = "system_settings_aigc_marking"
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG = "system_settings_local_archive_enabled"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG = "system_settings_local_archive_strategy"
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_IMPORT_TAG = "system_settings_local_archive_import"
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_EXPORT_TAG = "system_settings_local_archive_export"
 const val SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG = "system_settings_archive_enabled"
+const val SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG = "system_settings_archive_server_strategy"
 const val SYSTEM_SETTINGS_ARCHIVE_URL_TAG = "system_settings_archive_url"
 const val SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG = "system_settings_archive_token"
 const val SYSTEM_SETTINGS_ARCHIVE_TEST_TAG = "system_settings_archive_test"
@@ -466,7 +471,7 @@ fun SystemAndUpdateSettingsScreen(
                     modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG),
                     title = { Text("启用本地存档") },
                     description = {
-                        Text("开启后，阅读问题、回答和文章时会写入本机 SQLite。不需要服务器，也可以和存档服务器同时开启。默认关闭。")
+                        Text("开启后按下方保存策略写入本机 SQLite。不需要服务器，也可以和存档服务器同时开启。默认关闭。")
                     },
                     checked = localArchiveEnabled,
                     onCheckedChange = {
@@ -476,6 +481,31 @@ fun SystemAndUpdateSettingsScreen(
                     settingKey = LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY,
                     highlightedKey = highlightedSetting,
                 )
+
+                if (localArchiveEnabled) {
+                    var localArchiveStrategy by remember {
+                        mutableStateOf(
+                            ArchiveSaveStrategy.fromKey(
+                                settings.getString(
+                                    LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY,
+                                    ArchiveSaveStrategy.Default.key,
+                                ),
+                            ),
+                        )
+                    }
+                    ArchiveSaveStrategySetting(
+                        title = "本地保存策略",
+                        description = "加载会保存预取到的问答，阅读只保存打开过的问答，点赞或收藏只在对应操作成功后保存。与服务器策略互不影响。",
+                        settingKey = LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY,
+                        testTag = SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG,
+                        highlightedKey = highlightedSetting,
+                        value = localArchiveStrategy,
+                        onValueChange = {
+                            localArchiveStrategy = it
+                            settings.putString(LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, it.key)
+                        },
+                    )
+                }
 
                 SettingItem(
                     title = { Text("导入 / 导出本地存档") },
@@ -535,9 +565,9 @@ fun SystemAndUpdateSettingsScreen(
                     description = {
                         Text(
                             if (archiveConfigured) {
-                                "开启后，阅读问题、回答和文章时会把正文提交到你配置的存档服务器。默认关闭。"
+                                "开启后按下方保存策略把正文提交到你配置的存档服务器。默认关闭。"
                             } else {
-                                "请先填写服务器地址和令牌，再开启。开启后阅读问题、回答和文章时会自动提交正文。"
+                                "请先填写服务器地址和令牌，再开启。开启后按保存策略自动提交正文。"
                             },
                         )
                     },
@@ -547,6 +577,31 @@ fun SystemAndUpdateSettingsScreen(
                     settingKey = ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY,
                     highlightedKey = highlightedSetting,
                 )
+
+                if (archiveEnabled) {
+                    var archiveServerStrategy by remember {
+                        mutableStateOf(
+                            ArchiveSaveStrategy.fromKey(
+                                settings.getString(
+                                    ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY,
+                                    ArchiveSaveStrategy.Default.key,
+                                ),
+                            ),
+                        )
+                    }
+                    ArchiveSaveStrategySetting(
+                        title = "服务器保存策略",
+                        description = "加载会保存预取到的问答，阅读只保存打开过的问答，点赞或收藏只在对应操作成功后保存。与本地策略互不影响。",
+                        settingKey = ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY,
+                        testTag = SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG,
+                        highlightedKey = highlightedSetting,
+                        value = archiveServerStrategy,
+                        onValueChange = {
+                            archiveServerStrategy = it
+                            settings.putString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, it.key)
+                        },
+                    )
+                }
 
                 SettingItem(
                     title = { Text("存档服务器地址") },
@@ -795,4 +850,66 @@ fun SystemAndUpdateSettingsScreen(
             }
         }
     }
+}
+
+private val archiveSaveStrategyOptions = listOf(
+    ArchiveSaveStrategy.Loaded to "所有加载的问答",
+    ArchiveSaveStrategy.Read to "所有阅读的问答",
+    ArchiveSaveStrategy.Voted to "所有点赞的问答",
+    ArchiveSaveStrategy.Collected to "所有收藏的问答",
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ArchiveSaveStrategySetting(
+    title: String,
+    description: String,
+    settingKey: String,
+    testTag: String,
+    highlightedKey: String,
+    value: ArchiveSaveStrategy,
+    onValueChange: (ArchiveSaveStrategy) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    SettingItem(
+        title = { Text(title) },
+        description = { Text(description) },
+        settingKey = settingKey,
+        highlightedKey = highlightedKey,
+        endAction = {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+            ) {
+                OutlinedTextField(
+                    value = archiveSaveStrategyOptions.find { it.first == value }?.second
+                        ?: "所有阅读的问答",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .width(180.dp)
+                        .testTag(testTag),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    archiveSaveStrategyOptions.forEach { (strategy, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                onValueChange(strategy)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        },
+    )
 }

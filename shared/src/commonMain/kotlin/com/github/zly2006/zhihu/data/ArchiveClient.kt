@@ -31,9 +31,41 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 const val LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY = "enableLocalArchive"
+const val LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY = "localArchiveSaveStrategy"
 const val ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY = "enableArchiveServer"
+const val ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY = "archiveServerSaveStrategy"
 const val ARCHIVE_SERVER_URL_PREFERENCE_KEY = "archiveServerUrl"
 const val ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY = "archiveServerToken"
+
+enum class ArchiveSaveStrategy(
+    val key: String,
+) {
+    Loaded("loaded"),
+    Read("read"),
+    Voted("voted"),
+    Collected("collected"),
+    ;
+
+    fun shouldPersist(trigger: ArchiveSaveTrigger): Boolean = when (trigger) {
+        ArchiveSaveTrigger.Loaded -> this == Loaded
+        ArchiveSaveTrigger.Read -> this == Read || this == Loaded
+        ArchiveSaveTrigger.Voted -> this == Voted
+        ArchiveSaveTrigger.Collected -> this == Collected
+    }
+
+    companion object {
+        val Default = Read
+
+        fun fromKey(raw: String?): ArchiveSaveStrategy = entries.find { it.key == raw } ?: Default
+    }
+}
+
+enum class ArchiveSaveTrigger {
+    Loaded,
+    Read,
+    Voted,
+    Collected,
+}
 
 private const val ARCHIVE_TOKEN_HEADER = "X-Zhihu-Backup-Token"
 private const val MIN_ARCHIVE_CONTENT_TEXT_LENGTH = 30
@@ -74,6 +106,38 @@ fun createArchiveClient(
     if (trimmed.isBlank()) return null
     val url = if (trimmed.contains("://")) trimmed else "http://$trimmed"
     return ArchiveClient(httpClient, url, token.trim())
+}
+
+fun createArchiveItem(content: DataHolder.Content): ArchiveItem? = when (content) {
+    is DataHolder.Answer -> createArchiveItem(
+        type = "answer",
+        title = content.question.title,
+        contentHtml = content.content,
+        questionId = content.question.id.toString(),
+        answerId = content.id.toString(),
+        authorName = content.author.name,
+        authorUrl = content.author.url,
+        authorUrlToken = content.author.urlToken,
+    )
+    is DataHolder.Article -> createArchiveItem(
+        type = "article",
+        title = content.title,
+        contentHtml = content.content,
+        articleId = content.id.toString(),
+        authorName = content.author.name,
+        authorUrl = content.author.url,
+        authorUrlToken = content.author.urlToken,
+    )
+    is DataHolder.Question -> createArchiveItem(
+        type = "question",
+        title = content.title,
+        contentHtml = content.detail,
+        questionId = content.id.toString(),
+        authorName = content.author.name,
+        authorUrl = content.author.url,
+        authorUrlToken = content.author.urlToken,
+    )
+    else -> null
 }
 
 fun createArchiveItem(

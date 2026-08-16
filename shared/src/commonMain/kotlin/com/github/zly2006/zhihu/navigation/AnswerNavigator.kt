@@ -22,20 +22,27 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.github.zly2006.zhihu.data.ArchiveSaveTrigger
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.ZhihuJson
+import com.github.zly2006.zhihu.data.createArchiveItem
 import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.data.officialBadge
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.filter.ContentOpenEventSupport
 import com.github.zly2006.zhihu.util.Log
+import com.github.zly2006.zhihu.viewmodel.ArchiveEnvironment
 import com.github.zly2006.zhihu.viewmodel.ArticleViewModel.CachedAnswerContent
 import com.github.zly2006.zhihu.viewmodel.CollectionItem
 import com.github.zly2006.zhihu.viewmodel.ZhihuApiEnvironment
 import com.github.zly2006.zhihu.viewmodel.filter.ContentType
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.getOrFetchContentDetail
+import com.github.zly2006.zhihu.viewmodel.persistArchive
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
@@ -184,6 +191,14 @@ abstract class AnswerNavigator(
      */
     open suspend fun prefetchPrevious(currentArticleId: Long) = Unit
 
+    protected fun archiveLoadedAnswer(detail: DataHolder.Answer) {
+        val archiveEnvironment = environment as? ArchiveEnvironment ?: return
+        val item = createArchiveItem(detail) ?: return
+        CoroutineScope(Dispatchers.Default).launch {
+            persistArchive(archiveEnvironment, item, ArchiveSaveTrigger.Loaded)
+        }
+    }
+
     /**
      * 从来源加载上一个回答（非历史），在 [currentAnswerIndex] == 0（即 [goToPrevious] 返回 null）时由
      * navigateToPrevious 调用。
@@ -300,6 +315,7 @@ class QuestionAnswerNavigator(
 
     private suspend fun fetchCached(article: Article): CachedAnswerContent? {
         val detail = environment.getOrFetchContentDetail(article) as? DataHolder.Answer ?: return null
+        archiveLoadedAnswer(detail)
         return CachedAnswerContent(
             article = article,
             title = detail.question.title,
@@ -770,6 +786,7 @@ class PaginationInfoNavigator(
     private suspend fun fetchCached(answerId: Long): CachedAnswerContent? {
         val dest = Article(id = answerId, type = ArticleType.Answer)
         val detail = environment.getOrFetchContentDetail(dest) as? DataHolder.Answer ?: return null
+        archiveLoadedAnswer(detail)
         return CachedAnswerContent(
             article = dest,
             title = detail.question.title,
