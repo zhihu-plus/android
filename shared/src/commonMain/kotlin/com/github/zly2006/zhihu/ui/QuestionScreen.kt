@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fleeksoft.ksoup.Ksoup
+import com.github.zly2006.zhihu.data.ArchiveSaveTrigger
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.createArchiveItem
 import com.github.zly2006.zhihu.data.decodeQuestionContentDetail
@@ -236,16 +237,12 @@ fun QuestionScreen(
                 ) {
                     launch {
                         withContext(Dispatchers.Default) {
-                            val archiveItem = createArchiveItem(
-                                type = "question",
-                                title = questionData.title,
-                                contentHtml = questionData.detail,
-                                questionId = questionData.id.toString(),
-                                authorName = questionData.author.name,
-                                authorUrl = questionData.author.url,
-                                authorUrlToken = questionData.author.urlToken,
-                            ) ?: return@withContext
-                            persistArchive(paginationEnvironment, archiveItem)
+                            val archiveItem = createArchiveItem(questionData) ?: return@withContext
+                            persistArchive(
+                                paginationEnvironment,
+                                archiveItem,
+                                ArchiveSaveTrigger.Read,
+                            )
                         }
                     }
                 }

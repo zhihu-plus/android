@@ -30,6 +30,7 @@ import com.github.zly2006.zhihu.data.AigcVoteFlagSubmission
 import com.github.zly2006.zhihu.data.AigcVoteNamedVoter
 import com.github.zly2006.zhihu.data.AigcVoteReadEvent
 import com.github.zly2006.zhihu.data.AigcVoteReadEvidence
+import com.github.zly2006.zhihu.data.ArchiveSaveTrigger
 import com.github.zly2006.zhihu.data.Collection
 import com.github.zly2006.zhihu.data.CollectionResponse
 import com.github.zly2006.zhihu.data.DataHolder
@@ -308,7 +309,7 @@ class ArticleViewModel(
                                 ),
                             )
                             environment.recordOpenEvent(article, answer.question.id)
-                            archiveLoadedContent(environment)
+                            archiveCurrentContent(environment, ArchiveSaveTrigger.Read)
                             withContext(Dispatchers.Main.immediate) {
                                 // 设置问题回答导航器（如果当前不是收藏夹导航器）
                                 if (sharedData?.navigator !is CollectionAnswerNavigator) {
@@ -388,7 +389,7 @@ class ArticleViewModel(
                                 ),
                             )
                             environment.recordOpenEvent(this@ArticleViewModel.article, null)
-                            archiveLoadedContent(environment)
+                            archiveCurrentContent(environment, ArchiveSaveTrigger.Read)
                         } else {
                             content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
                             Log.e("ArticleViewModel", "Article not found")
@@ -420,6 +421,9 @@ class ArticleViewModel(
 
                 if (response.status.isSuccess()) {
                     loadCollections(environment)
+                    if (!remove && environment is ArchiveEnvironment) {
+                        archiveCurrentContent(environment, ArchiveSaveTrigger.Collected)
+                    }
                     userMessages.showShortMessage(if (remove) "取消收藏成功" else "收藏成功")
                 } else {
                     userMessages.showShortMessage("收藏操作失败")
@@ -657,6 +661,9 @@ class ArticleViewModel(
                 voteUpState = newState
                 voteUpCount = response["voteup_count"]!!.jsonPrimitive.int
                 votersTotal = voteUpCount
+                if (newState == VoteUpState.Up && environment is ArchiveEnvironment) {
+                    archiveCurrentContent(environment, ArchiveSaveTrigger.Voted)
+                }
                 if (article.type == ArticleType.Answer) {
                     loadAnswerRelationshipEndorsement(environment)
                     loadMoreVoters(environment, reset = true)
@@ -717,32 +724,20 @@ class ArticleViewModel(
         }
     }
 
-    private fun archiveLoadedContent(environment: ArchiveEnvironment) {
-        if (environment.localArchiveDao() == null && environment.archiveClient() == null) return
-        val item = when (val source = exportSourceContent) {
-            is DataHolder.Answer -> createArchiveItem(
-                type = "answer",
-                title = source.question.title,
-                contentHtml = source.content,
-                questionId = source.question.id.toString(),
-                answerId = source.id.toString(),
-                authorName = source.author.name,
-                authorUrl = source.author.url,
-                authorUrlToken = source.author.urlToken,
-            )
-            is DataHolder.Article -> createArchiveItem(
-                type = "article",
-                title = source.title,
-                contentHtml = source.content,
-                articleId = source.id.toString(),
-                authorName = source.author.name,
-                authorUrl = source.author.url,
-                authorUrlToken = source.author.urlToken,
-            )
-            else -> null
-        } ?: return
+    private fun archiveCurrentContent(
+        environment: ArchiveEnvironment,
+        trigger: ArchiveSaveTrigger,
+    ) {
+        val source = exportSourceContent ?: return
+        val matchesCurrent = when (source) {
+            is DataHolder.Answer -> article.type == ArticleType.Answer && source.id == article.id
+            is DataHolder.Article -> article.type == ArticleType.Article && source.id == article.id
+            else -> false
+        }
+        if (!matchesCurrent) return
+        val item = createArchiveItem(source) ?: return
         viewModelScope.launch(Dispatchers.Default) {
-            persistArchive(environment, item)
+            persistArchive(environment, item, trigger)
         }
     }
 

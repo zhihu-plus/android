@@ -20,13 +20,16 @@ package com.github.zly2006.zhihu.viewmodel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ArchiveClient
+import com.github.zly2006.zhihu.data.ArchiveSaveStrategy
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ZhihuJson.json
 import com.github.zly2006.zhihu.data.createArchiveClient
 import com.github.zly2006.zhihu.data.navDestination
@@ -164,6 +167,16 @@ class DesktopPaginationEnvironment(
         if (!settingsStore.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false)) return null
         return getLocalArchiveDatabase().localArchiveDao()
     }
+
+    override fun localArchiveSaveStrategy(): ArchiveSaveStrategy =
+        ArchiveSaveStrategy.fromKey(
+            settingsStore.getString(LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, ArchiveSaveStrategy.Default.key),
+        )
+
+    override fun archiveServerSaveStrategy(): ArchiveSaveStrategy =
+        ArchiveSaveStrategy.fromKey(
+            settingsStore.getString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, ArchiveSaveStrategy.Default.key),
+        )
 
     override fun xsrfToken(): String = store.load().cookies["_xsrf"] ?: ""
 
