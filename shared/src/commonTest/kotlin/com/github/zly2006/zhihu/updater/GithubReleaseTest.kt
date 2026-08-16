@@ -69,6 +69,7 @@ class GithubReleaseTest {
     @Test
     fun updateCheckUrlsPointToZhihuPlusAndroidRepo() {
         assertEquals("zhihu-plus/android", ZHIHU_PLUS_PLUS_GITHUB_REPO)
+        assertEquals("https://github.com/zhihu-plus/android", ZHIHU_PLUS_PLUS_GITHUB_URL)
         assertEquals(
             "https://api.github.com/repos/zhihu-plus/android/releases/latest",
             ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL,

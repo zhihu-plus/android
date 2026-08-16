@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_REPO = "zly2006/zhihu-plus-plus"
+DEFAULT_REPO = "zhihu-plus/android"
 DEFAULT_ASSET = "zhihu++-lite.apk"
 DEFAULT_NEW_PACKAGE = "com.github.zly2006.zhplus.lite.release"
 DEFAULT_APKTOOL_VERSION = "v3.0.2"

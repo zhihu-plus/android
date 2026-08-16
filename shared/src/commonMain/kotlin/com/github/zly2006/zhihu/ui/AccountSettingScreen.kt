@@ -99,6 +99,7 @@ import com.github.zly2006.zhihu.ui.subscreens.defaultBottomBarSelectionKeys
 import com.github.zly2006.zhihu.ui.subscreens.normalizeBottomBarSelection
 import com.github.zly2006.zhihu.ui.subscreens.rememberSystemUpdateRuntime
 import com.github.zly2006.zhihu.ui.subscreens.shouldShowAccountHistoryShortcut
+import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_URL
 import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import org.jetbrains.compose.resources.painterResource
@@ -566,10 +567,10 @@ fun AccountSettingScreen(
                 )
                 SettingItem(
                     title = { Text("GitHub 项目地址") },
-                    description = { Text("https://github.com/zly2006/zhihu-plus-plus") },
+                    description = { Text(ZHIHU_PLUS_PLUS_GITHUB_URL) },
                     icon = { Icon(painterResource(Res.drawable.ic_github_24dp), null) },
                     onClick = {
-                        openSystemUrl("https://github.com/zly2006/zhihu-plus-plus")
+                        openSystemUrl(ZHIHU_PLUS_PLUS_GITHUB_URL)
                     },
                     endAction = {
                         Icon(
@@ -585,7 +586,7 @@ fun AccountSettingScreen(
                     description = { Text("AGPL-3.0-only") },
                     icon = { Icon(painterResource(Res.drawable.ic_license_24dp), null) },
                     onClick = {
-                        openSystemUrl("https://github.com/zly2006/zhihu-plus-plus/blob/master/LICENSE")
+                        openSystemUrl("$ZHIHU_PLUS_PLUS_GITHUB_URL/blob/master/LICENSE")
                     },
                     endAction = {
                         Icon(

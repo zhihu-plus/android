@@ -112,6 +112,7 @@ import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.components.SettingItemOverall
 import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
 import com.github.zly2006.zhihu.ui.components.normalizedAnswerSwitchSensitivity
+import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_URL
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
@@ -1457,7 +1458,7 @@ fun AppearanceSettingsScreen(
                     Text(
                         text = buildAnnotatedString {
                             append("以上设置项可能随时更改，或并入主线。\n欢迎")
-                            withLink(LinkAnnotation.Url("https://github.com/zly2006/zhihu-plus-plus/issues")) {
+                            withLink(LinkAnnotation.Url("$ZHIHU_PLUS_PLUS_GITHUB_URL/issues")) {
                                 withStyle(
                                     MaterialTheme.typography.bodyMedium
                                         .copy(

@@ -27,6 +27,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 const val ZHIHU_PLUS_PLUS_GITHUB_REPO = "zhihu-plus/android"
+const val ZHIHU_PLUS_PLUS_GITHUB_URL = "https://github.com/$ZHIHU_PLUS_PLUS_GITHUB_REPO"
 const val ZHIHU_PLUS_PLUS_GITHUB_LATEST_RELEASE_URL =
     "https://api.github.com/repos/$ZHIHU_PLUS_PLUS_GITHUB_REPO/releases/latest"
 const val ZHIHU_PLUS_PLUS_GITHUB_NIGHTLY_RELEASE_URL =

@@ -20,6 +20,7 @@ package com.github.zly2006.zhihu.util
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
 import com.github.zly2006.zhihu.data.DataHolder
+import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_URL
 import com.github.zly2006.zhihu.util.twoDigitString
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -40,7 +41,6 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 const val ARTICLE_EXPORT_TEMPLATE_ASSET = "article_export_template.html"
-const val ARTICLE_EXPORT_GITHUB_URL = "https://github.com/zly2006/zhihu-plus-plus"
 private const val ARTICLE_EXPORT_IMAGE_FETCH_CONCURRENCY = 6
 
 data class ArticleExportFooterData(
@@ -48,7 +48,7 @@ data class ArticleExportFooterData(
     val createdEpochSeconds: Long = 0L,
     val updatedEpochSeconds: Long = 0L,
     val includeAppAttribution: Boolean = true,
-    val githubUrl: String = ARTICLE_EXPORT_GITHUB_URL,
+    val githubUrl: String = ZHIHU_PLUS_PLUS_GITHUB_URL,
 )
 
 data class ArticleExportData(
