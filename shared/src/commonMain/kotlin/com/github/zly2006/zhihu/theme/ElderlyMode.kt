@@ -35,38 +35,10 @@ const val ELDERLY_MODE_PREFERENCE_KEY = "elderlyMode"
  */
 const val ELDERLY_MODE_FONT_SCALE = 1.25f
 
-/**
- * 各厂商系统老年/简易/关怀模式使用的 Settings 键。
- *
- * AOSP 没有统一老年模式 API，只能读取厂商写入的键；键不存在时不得当成已开启。
- */
-internal val SYSTEM_ELDERLY_MODE_SETTING_KEYS = listOf(
-    "elderly_mode",
-    "elder_mode",
-    "elderly_care",
-    "hw_elderly_mode",
-    "senior_mode",
-    "care_mode",
-    "easy_mode",
-    "easy_mode_switch",
-    "easy_mode_state",
-    "sem_easy_mode",
-    "simple_mode",
-    "oldman_mode",
-    "oplus_easy_mode",
-    "color_easy_mode",
-    "vivo_easy_mode",
-)
-
-fun settingValueEnablesElderlyMode(raw: String?): Boolean {
+internal fun settingValueEnablesElderlyMode(raw: String?): Boolean {
     val value = raw?.trim()?.lowercase() ?: return false
     return value == "1" || value == "true" || value == "on" || value == "yes"
 }
-
-fun resolveElderlyModeEnabled(
-    stored: Boolean?,
-    systemEnabled: Boolean,
-): Boolean = stored ?: systemEnabled
 
 @Composable
 expect fun rememberSystemElderlyModeEnabled(): Boolean

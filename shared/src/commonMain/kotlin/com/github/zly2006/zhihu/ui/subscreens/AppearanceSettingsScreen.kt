@@ -98,7 +98,7 @@ import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.theme.ELDERLY_MODE_PREFERENCE_KEY
 import com.github.zly2006.zhihu.theme.ThemeManager
 import com.github.zly2006.zhihu.theme.ThemeMode
-import com.github.zly2006.zhihu.theme.rememberSystemElderlyModeEnabled
+import com.github.zly2006.zhihu.theme.rememberElderlyModeEnabled
 import com.github.zly2006.zhihu.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
@@ -566,27 +566,13 @@ fun AppearanceSettingsScreen(
             SettingItemGroup(
                 title = "阅读",
             ) {
-                val systemElderlyMode = rememberSystemElderlyModeEnabled()
-                var elderlyMode by remember(systemElderlyMode) {
-                    mutableStateOf(settings.getBoolean(ELDERLY_MODE_PREFERENCE_KEY, systemElderlyMode))
-                }
+                val elderlyMode = rememberElderlyModeEnabled()
                 SettingItemWithSwitch(
                     modifier = Modifier.testTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG),
                     title = { Text("老年模式") },
-                    description = {
-                        Text(
-                            if (systemElderlyMode) {
-                                "已跟随系统老年模式默认打开，放大界面文字。也可手动开关。"
-                            } else {
-                                "系统老年模式开启时默认打开，放大界面文字。也可手动开关。"
-                            },
-                        )
-                    },
+                    description = { Text("系统老年模式开启时默认打开，放大界面文字。也可手动开关。") },
                     checked = elderlyMode,
-                    onCheckedChange = {
-                        elderlyMode = it
-                        settings.putBoolean(ELDERLY_MODE_PREFERENCE_KEY, it)
-                    },
+                    onCheckedChange = { settings.putBoolean(ELDERLY_MODE_PREFERENCE_KEY, it) },
                     settingKey = ELDERLY_MODE_PREFERENCE_KEY,
                     highlightedKey = settingKey,
                     bringIntoViewRequester = requesterFor(ELDERLY_MODE_PREFERENCE_KEY),

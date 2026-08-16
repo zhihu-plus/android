@@ -111,12 +111,13 @@ class AppearanceSettingsScreenInstrumentedTest {
         waitUntilTagExists(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
         scrollUntilTagDisplayed(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
         assertFalse(preferences.contains(ELDERLY_MODE_PREFERENCE_KEY))
-        composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
-        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = true)
+        val systemEnabled = readSystemElderlyModeEnabled(composeRule.activity.contentResolver)
 
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
-        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = false)
-        assertFalse(readSystemElderlyModeEnabled(composeRule.activity.contentResolver))
+        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = !systemEnabled)
+
+        composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
+        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = systemEnabled)
     }
 
     @Test

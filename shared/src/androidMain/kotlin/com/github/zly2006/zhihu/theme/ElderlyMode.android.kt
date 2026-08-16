@@ -31,12 +31,37 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
+/**
+ * 各厂商系统老年/简易/关怀模式使用的 Settings 键。
+ *
+ * AOSP 没有统一老年模式 API，只能读取厂商写入的键；键不存在或读失败时不得当成已开启。
+ */
+private val SYSTEM_ELDERLY_MODE_SETTING_KEYS = listOf(
+    "elderly_mode",
+    "elder_mode",
+    "elderly_care",
+    "hw_elderly_mode",
+    "senior_mode",
+    "care_mode",
+    "easy_mode",
+    "easy_mode_switch",
+    "easy_mode_state",
+    "sem_easy_mode",
+    "simple_mode",
+    "oldman_mode",
+    "oplus_easy_mode",
+    "color_easy_mode",
+    "vivo_easy_mode",
+)
+
 fun readSystemElderlyModeEnabled(resolver: ContentResolver): Boolean =
     SYSTEM_ELDERLY_MODE_SETTING_KEYS.any { key ->
-        settingValueEnablesElderlyMode(Settings.System.getString(resolver, key)) ||
-            settingValueEnablesElderlyMode(Settings.Secure.getString(resolver, key)) ||
-            settingValueEnablesElderlyMode(Settings.Global.getString(resolver, key))
+        settingValueEnablesElderlyMode(safeSettingString { Settings.System.getString(resolver, key) }) ||
+            settingValueEnablesElderlyMode(safeSettingString { Settings.Secure.getString(resolver, key) }) ||
+            settingValueEnablesElderlyMode(safeSettingString { Settings.Global.getString(resolver, key) })
     }
+
+private fun safeSettingString(read: () -> String?): String? = runCatching { read() }.getOrNull()
 
 @Composable
 actual fun rememberSystemElderlyModeEnabled(): Boolean {

@@ -77,6 +77,7 @@ fun ZhihuTheme(
     PlatformSystemBarEffect(darkTheme)
 
     val elderlyModeEnabled = rememberElderlyModeEnabled()
+    // 必须读外层系统 density。若在 Provider 内再读 LocalDensity，重组会把 1.25 叠乘上去。
     val density = LocalDensity.current
     val themedDensity = if (elderlyModeEnabled) {
         Density(
