@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -44,6 +45,7 @@ import com.github.zly2006.zhihu.test.setScreenContent
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_URL_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SystemAndUpdateSettingsScreen
 import com.github.zly2006.zhihu.updater.SchematicVersion
 import com.github.zly2006.zhihu.updater.UpdateManager
@@ -140,9 +142,10 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         val scrollContainer = scrollContainer()
 
         waitUntilDisplayed(hasText("自动检查更新"))
-        scrollContainer.performScrollToNode(hasText("防沉迷提醒"))
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG))
         composeRule.onNodeWithText("防沉迷提醒").assertIsDisplayed()
-        composeRule.onNode(hasText("关闭") and hasClickAction()).performClick()
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG).performClick()
+        waitUntilDisplayed(hasText("每 30 分钟"))
         composeRule.onNode(hasText("每 30 分钟"), useUnmergedTree = true).performClick()
 
         waitUntilIntPreference(

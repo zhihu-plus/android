@@ -109,6 +109,7 @@ const val SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG = "system_settings_archive_enabled
 const val SYSTEM_SETTINGS_ARCHIVE_URL_TAG = "system_settings_archive_url"
 const val SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG = "system_settings_archive_token"
 const val SYSTEM_SETTINGS_ARCHIVE_TEST_TAG = "system_settings_archive_test"
+const val SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG = "system_settings_reminder_interval"
 
 /**
  * 系统、更新和外部服务设置页。
@@ -722,7 +723,8 @@ fun SystemAndUpdateSettingsScreen(
                                 },
                                 modifier = Modifier
                                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                                    .width(160.dp),
+                                    .width(160.dp)
+                                    .testTag(SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG),
                                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                             )
                             ExposedDropdownMenu(
