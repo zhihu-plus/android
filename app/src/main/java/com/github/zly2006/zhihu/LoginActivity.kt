@@ -133,7 +133,7 @@ class LoginActivity : ComponentActivity() {
                             else ->
                                 LoginNoticeScreen(
                                     stepTag = "login_notice_step_3",
-                                    message = "我知晓，本应用可能会收集部分匿名化的使用信息来确定使用人数，我可以在设置中随时关闭此项遥测。",
+                                    message = "我知晓，本应用默认不会发送遥测。如需帮助统计使用人数，我可以在设置中开启匿名使用统计。",
                                     secondaryButtonText = "查看设置",
                                     onSecondaryAction = {
                                         startActivity(

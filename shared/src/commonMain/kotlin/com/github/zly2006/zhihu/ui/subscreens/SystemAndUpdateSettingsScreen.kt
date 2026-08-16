@@ -385,10 +385,10 @@ fun SystemAndUpdateSettingsScreen(
                     highlightedKey = highlightedSetting,
                 )
 
-                var allowTelemetry by remember { mutableStateOf(settings.getBoolean("allowTelemetry", true)) }
+                var allowTelemetry by remember { mutableStateOf(settings.getBoolean("allowTelemetry", false)) }
                 SettingItemWithSwitch(
                     title = { Text("允许发送遥测统计数据") },
-                    description = { Text("仅用于统计使用人数，不包含个人隐私") },
+                    description = { Text("仅用于统计使用人数，不包含个人隐私。默认关闭。") },
                     checked = allowTelemetry,
                     onCheckedChange = {
                         allowTelemetry = it

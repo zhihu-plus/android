@@ -128,7 +128,7 @@ URL 解析集中在 `resolveContent()`。支持知乎问题、回答、文章、
 | `archiveServerToken` | 存档服务器令牌 | 请求头 `X-Zhihu-Backup-Token` | 不要打印或提交真实 token |
 | `autoCheckUpdates` | 自动检查更新 | 启动后后台检查 | 通过 update runtime 存取 |
 | `checkNightlyUpdates` | Nightly 更新 | 是否检查每日构建 | Android updater 和 Desktop runtime 都读 |
-| `allowTelemetry` | 遥测统计 | 匿名使用统计 | 不影响核心功能 |
+| `allowTelemetry` | 遥测统计 | 匿名使用统计 | 默认关闭；不影响核心功能 |
 | `continuousUsageReminderIntervalMinutes` | 防沉迷提醒 | 连续使用提醒间隔 | 0 表示关闭 |
 | `developer` | 开发者模式 | 账号页显示开发者选项 | 账号页点击版本 5 次开启 |
 | `enableScrollEndHaptic` | 开发者选项: 滚动到底震动 | 滚动边界反馈行为开关 | 改前查具体 overScroll 使用点 |
