@@ -56,6 +56,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import com.github.zly2006.zhihu.navigation.Person as PersonDestination
 import com.github.zly2006.zhihu.ui.FollowedQuestion as FollowedQuestionImpl
 import com.github.zly2006.zhihu.ui.FollowedTopic as FollowedTopicImpl
 
@@ -131,6 +132,31 @@ val FeedDisplayItem.navDestination: NavDestination?
         ?: feed?.target?.navDestination
 
 fun NavDestination.toFeedDisplayItemNavDestinationJson(): String = feedNavigationJson.encodeToString<NavDestination>(this)
+
+val FeedDisplayItem.questionDestination: Question?
+    get() = when (val target = feed?.target) {
+        is Feed.AnswerTarget -> Question(
+            questionId = target.question.id,
+            title = target.question.title,
+        )
+        is Feed.QuestionTarget -> Question(
+            questionId = target.id,
+            title = target.title,
+        )
+        else -> null
+    }
+
+val FeedDisplayItem.authorDestination: PersonDestination?
+    get() {
+        val author = feed?.target?.author ?: return null
+        val urlToken = author.urlToken.orEmpty()
+        if (author.id.isBlank() && urlToken.isBlank()) return null
+        return PersonDestination(
+            id = author.id.ifBlank { PersonDestination.EMPTY_ID },
+            urlToken = urlToken,
+            name = author.name,
+        )
+    }
 
 val Feed.Target.navDestination: NavDestination?
     get() = when (this) {

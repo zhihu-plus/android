@@ -51,7 +51,7 @@ URL 解析集中在 `resolveContent()`。支持知乎问题、回答、文章、
 
 主题状态集中在 `ThemeManager` 和平台 `ThemeSettingsRuntime`。`themeMode` 控制明暗，`useDynamicColor` 控制 Material You 动态取色，`customThemeColor` 在动态取色关闭后生效，`backgroundColorLight` / `backgroundColorDark` 控制背景色，`luotianyi_color` 控制应用内浏览器工具栏色。
 
-信息流卡片由 `FeedCard` 读取 `showFeedThumbnail`、`feedCardStyle`、`duo3_card_appearance`、`duo3_card_layout`、`duo3_card_large_title`。改这些 key 的语义时要同时查主页、关注、热榜、历史和搜索结果等复用卡片的页面。
+信息流卡片由 `FeedCard` 读取 `showFeedThumbnail`、`feedCardStyle`、`duo3_card_appearance`、`duo3_card_layout`、`duo3_card_large_title`。改这些 key 的语义时要同时查主页、关注、热榜、历史和搜索结果等复用卡片的页面。回答卡片标题进入问题页，作者行进入个人主页，其余区域仍打开原内容。
 
 文章、问题详情和想法正文会根据 `ARTICLE_USE_WEBVIEW_PREFERENCE_KEY` 在 WebView 与 Compose Markdown 之间切换；该常量当前值是 `webviewRender`。WebView 正文渲染只作为废弃路径保留，不再接受新功能；阅读体验新能力只接入 Compose Markdown 路径。Compose Markdown 路径依赖 `RenderMarkdown` 和 `SegmentedText` 的字号、行高和段间距设置。
 
