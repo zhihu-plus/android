@@ -33,6 +33,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assert("com.github.zly2006.zhplus" in appContext.packageName)
+        assert("com.github.zhihuplus" in appContext.packageName)
     }
 }

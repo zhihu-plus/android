@@ -13,7 +13,7 @@ readonly device_serial=${ANDROID_SERIAL:-emulator-5554}
 readonly results_dir=app/build/outputs/androidTest-results
 readonly app_apk=${INSTRUMENT_APP_APK:?INSTRUMENT_APP_APK must point to the app APK}
 readonly test_apk=${INSTRUMENT_TEST_APK:?INSTRUMENT_TEST_APK must point to the test APK}
-readonly instrumentation_component=com.github.zly2006.zhplus.lite.test/com.github.zly2006.zhihu.ZhihuInstrumentedTestRunner
+readonly instrumentation_component=com.github.zhihuplus.lite.test/com.github.zly2006.zhihu.ZhihuInstrumentedTestRunner
 readonly instrumentation_result="$results_dir/instrumentation-shard-$shard_index.txt"
 
 mkdir -p "$results_dir"
