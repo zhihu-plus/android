@@ -27,8 +27,10 @@ import android.view.MotionEvent
 import androidx.compose.foundation.ComposeFoundationFlags
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
@@ -1251,6 +1253,42 @@ class ArticleScreenInstrumentedTest {
             1200.0 / 880.0,
             imageBounds.width.toDouble() / imageBounds.height.toDouble(),
             0.02,
+        )
+    }
+
+    @Test
+    fun markdownImageFillsContentWidth() {
+        composeRule.setScreenContent {
+            Box(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .testTag("markdown-image-host"),
+            ) {
+                RenderImage(
+                    data = MarkdownImageData(
+                        url = "https://invalid.invalid/full-width.jpg",
+                        altText = "铺满宽度的图片",
+                        width = 800,
+                        height = 3200,
+                    ),
+                    modifier = androidx.compose.ui.Modifier,
+                )
+            }
+        }
+
+        val hostBounds = composeRule
+            .onNodeWithTag("markdown-image-host")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        val imageBounds = composeRule
+            .onNodeWithContentDescription("铺满宽度的图片")
+            .fetchSemanticsNode()
+            .boundsInRoot
+        assertTrue("Host width must be reserved", hostBounds.width > 0f)
+        assertEquals(
+            hostBounds.width.toDouble(),
+            imageBounds.width.toDouble(),
+            1.0,
         )
     }
 

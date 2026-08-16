@@ -303,7 +303,8 @@ internal fun estimateMarkdownBlockHeightDp(
                 ?.takeIf { it > 0 }
                 ?.let { width -> node.imageHeight?.toFloat()?.div(width) }
                 ?: 0.75f
-            safeWidth * 0.8f * ratio.coerceIn(0.25f, 3f) +
+            // 与正文块图铺满内容区宽度一致。不要再按 0.8 估算，否则 lazy 高度会偏矮、滚动会跳。
+            safeWidth * ratio.coerceIn(0.25f, 3f) +
                 if (node.caption.isBlank()) 0f else lineHeight
         }
         is FencedCodeBlock ->

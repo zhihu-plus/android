@@ -30,7 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toDrawable
@@ -88,6 +90,10 @@ class OpenImageDialog(
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             state = imageState,
+                            // 默认 Fit 会把整张长图塞进视口，宽度被压得很窄。
+                            // 按宽度铺满并从顶部开始，与官方长图预览一致。
+                            contentScale = ContentScale.FillWidth,
+                            alignment = Alignment.TopCenter,
                             onClick = { onClick() },
                             onLongClick = onLongClick,
                         )
