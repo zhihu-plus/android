@@ -56,6 +56,8 @@ private val SYSTEM_ELDERLY_MODE_SETTING_KEYS = listOf(
 
 fun readSystemElderlyModeEnabled(resolver: ContentResolver): Boolean =
     SYSTEM_ELDERLY_MODE_SETTING_KEYS.any { key ->
+        // 必须用 getString。旧 MIUI isSimpleMode 对缺失的 simple_mode 使用 getInt(..., 1)，
+        // 键不存在时会当成已开启；getString 在键缺失时返回 null，才能保持“未写入即未开启”。
         settingValueEnablesElderlyMode(safeSettingString { Settings.System.getString(resolver, key) }) ||
             settingValueEnablesElderlyMode(safeSettingString { Settings.Secure.getString(resolver, key) }) ||
             settingValueEnablesElderlyMode(safeSettingString { Settings.Global.getString(resolver, key) })

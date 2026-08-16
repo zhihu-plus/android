@@ -56,7 +56,7 @@ fun rememberElderlyModeEnabled(): Boolean {
         }
         onDispose { unregister() }
     }
-    return remember(revision, systemEnabled) {
+    return remember(revision, systemEnabled, settings) {
         settings.getBoolean(ELDERLY_MODE_PREFERENCE_KEY, systemEnabled)
     }
 }
