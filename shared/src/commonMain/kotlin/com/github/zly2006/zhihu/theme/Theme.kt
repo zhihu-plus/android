@@ -22,7 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import com.materialkolor.dynamicColorScheme
 
 private val DarkColorScheme = darkColorScheme(
@@ -73,11 +76,25 @@ fun ZhihuTheme(
 
     PlatformSystemBarEffect(darkTheme)
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    val elderlyModeEnabled = rememberElderlyModeEnabled()
+    // 必须读外层系统 density。若在 Provider 内再读 LocalDensity，重组会把 1.25 叠乘上去。
+    val density = LocalDensity.current
+    val themedDensity = if (elderlyModeEnabled) {
+        Density(
+            density = density.density,
+            fontScale = density.fontScale * ELDERLY_MODE_FONT_SCALE,
+        )
+    } else {
+        density
+    }
+
+    CompositionLocalProvider(LocalDensity provides themedDensity) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content,
+        )
+    }
 }
 
 @Composable

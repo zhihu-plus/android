@@ -45,6 +45,8 @@ import com.github.zly2006.zhihu.navigation.OnlineHistory
 import com.github.zly2006.zhihu.test.performVerticalSwipeCycle
 import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.test.setScreenContent
+import com.github.zly2006.zhihu.theme.ELDERLY_MODE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.theme.readSystemElderlyModeEnabled
 import com.github.zly2006.zhihu.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
@@ -52,6 +54,7 @@ import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_ANSWER_DOUBLE_TAP_TAG
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_BOTTOM_BAR_SECTION_KEY
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_COLLECTION_DIRECT_BROWSE_TAG
+import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_ELDERLY_MODE_TAG
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_SCROLL_TAG
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_START_DESTINATION_TAG
 import com.github.zly2006.zhihu.ui.subscreens.APPEARANCE_SETTINGS_USE_WEBVIEW_TAG
@@ -99,6 +102,22 @@ class AppearanceSettingsScreenInstrumentedTest {
         scrollUntilTagDisplayed(APPEARANCE_SETTINGS_USE_WEBVIEW_TAG)
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_USE_WEBVIEW_TAG).performClick()
         waitUntilBooleanPreference(ARTICLE_USE_WEBVIEW_PREFERENCE_KEY, expected = false)
+    }
+
+    @Test
+    fun togglingElderlyModePersistsOverride() {
+        setUpScreen(setting = ELDERLY_MODE_PREFERENCE_KEY)
+
+        waitUntilTagExists(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
+        scrollUntilTagDisplayed(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
+        assertFalse(preferences.contains(ELDERLY_MODE_PREFERENCE_KEY))
+        val systemEnabled = readSystemElderlyModeEnabled(composeRule.activity.contentResolver)
+
+        composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
+        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = !systemEnabled)
+
+        composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
+        waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = systemEnabled)
     }
 
     @Test
