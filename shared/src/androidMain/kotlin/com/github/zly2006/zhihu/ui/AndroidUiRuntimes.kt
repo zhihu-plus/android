@@ -42,6 +42,8 @@ import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.github.zly2006.zhihu.data.AccountData
+import com.github.zly2006.zhihu.data.encodeLocalArchiveBackup
+import com.github.zly2006.zhihu.data.importLocalArchiveBackupFromJsonText
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.notification.NotificationSettingsStore
 import com.github.zly2006.zhihu.platform.UserMessageSink
@@ -55,6 +57,7 @@ import com.github.zly2006.zhihu.util.OpenInBrowser
 import com.github.zly2006.zhihu.util.createEmojiInlineContent
 import com.github.zly2006.zhihu.util.fuckHonorService
 import com.github.zly2006.zhihu.viewmodel.SharedAndroidNotificationEnvironment
+import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.encodeBlocklistBackup
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.importBlocklistBackupFromJsonText
@@ -307,6 +310,77 @@ actual fun rememberBlocklistRuleExporter(): suspend () -> String {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             context.startActivity(Intent.createChooser(intent, "查看屏蔽规则"))
+            "已导出到 ${file.absolutePath}"
+        }
+    }
+}
+
+@Composable
+actual fun rememberLocalArchiveImporter(
+    userMessages: UserMessageSink,
+): (((String) -> Unit) -> Unit) {
+    val context = LocalContext.current
+    val database = remember(context) { getLocalArchiveDatabase(context) }
+    val coroutineScope = rememberCoroutineScope()
+    var importCallback by remember { mutableStateOf<((String) -> Unit)?>(null) }
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                try {
+                    val summary = withContext(Dispatchers.IO) {
+                        val text = context.contentResolver
+                            .openInputStream(uri)
+                            ?.bufferedReader()
+                            ?.readText()
+                            ?: return@withContext "读取文件失败"
+                        importLocalArchiveBackupFromJsonText(
+                            dao = database.localArchiveDao(),
+                            text = text,
+                        )
+                    }
+                    importCallback?.invoke(summary)
+                } catch (e: Exception) {
+                    Log.e("LocalArchive", "Failed to import local archive", e)
+                    userMessages.showShortMessage("导入失败: ${e.message}")
+                }
+            }
+        }
+    }
+    return remember(context, database, userMessages, importLauncher) {
+        { onImported ->
+            importCallback = onImported
+            importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+        }
+    }
+}
+
+@Composable
+actual fun rememberLocalArchiveExporter(): suspend () -> String {
+    val context = LocalContext.current
+    val database = remember(context) { getLocalArchiveDatabase(context) }
+    return remember(context, database) {
+        suspend {
+            val file = withContext(Dispatchers.IO) {
+                val dir = context.getExternalFilesDir(null) ?: context.filesDir
+                val file = File(dir, "zhihupp_archive.json")
+                file.writeText(encodeLocalArchiveBackup(database.localArchiveDao()))
+                file
+            }
+            val intent = Intent().apply {
+                action = Intent.ACTION_VIEW
+                setDataAndType(
+                    FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        file,
+                    ),
+                    "application/json",
+                )
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(intent, "查看本地存档"))
             "已导出到 ${file.absolutePath}"
         }
     }

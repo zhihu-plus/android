@@ -133,6 +133,18 @@ actual fun rememberBlocklistRuleExporter(): suspend () -> String = remember {
     { "" } // TODO: iOS 导出规则
 }
 
+@Composable
+actual fun rememberLocalArchiveImporter(
+    userMessages: UserMessageSink,
+): (((String) -> Unit) -> Unit) = remember(userMessages) {
+    { _ -> userMessages.showMessage("iOS 导入存档暂未实现") } // TODO: iOS 导入存档
+}
+
+@Composable
+actual fun rememberLocalArchiveExporter(): suspend () -> String = remember {
+    { "当前平台暂不支持导出本地存档" } // TODO: iOS 导出存档
+}
+
 internal fun openIosUrl(url: String) {
     val nsUrl = NSURL.URLWithString(url) ?: return
     UIApplication.sharedApplication.openURL(nsUrl)

@@ -119,12 +119,11 @@ import com.github.zly2006.zhihu.ui.components.ShareDialog
 import com.github.zly2006.zhihu.ui.components.getShareText
 import com.github.zly2006.zhihu.ui.components.handleShareAction
 import com.github.zly2006.zhihu.ui.components.rememberShareActionExecutor
-import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.viewmodel.ContentLoadEnvironment
 import com.github.zly2006.zhihu.viewmodel.addReadHistory
 import com.github.zly2006.zhihu.viewmodel.feed.QuestionFeedViewModel
+import com.github.zly2006.zhihu.viewmodel.persistArchive
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -232,21 +231,21 @@ fun QuestionScreen(
                 isFollowing = questionData.relationship.isFollowing
                 topics = questionData.topics
                 isQuestionLoaded = true
-                launch {
-                    val client = paginationEnvironment.archiveClient() ?: return@launch
-                    withContext(Dispatchers.Default) {
-                        val archiveItem = createArchiveItem(
-                            type = "question",
-                            title = questionData.title,
-                            contentHtml = questionData.detail,
-                            questionId = questionData.id.toString(),
-                            authorName = questionData.author.name,
-                            authorUrl = questionData.author.url,
-                            authorUrlToken = questionData.author.urlToken,
-                        ) ?: return@withContext
-                        runCatching { client.saveItem(archiveItem) }.onFailure { error ->
-                            if (error is CancellationException) throw error
-                            Log.w("Archive", "提交问题存档失败", error)
+                if (paginationEnvironment.localArchiveDao() != null ||
+                    paginationEnvironment.archiveClient() != null
+                ) {
+                    launch {
+                        withContext(Dispatchers.Default) {
+                            val archiveItem = createArchiveItem(
+                                type = "question",
+                                title = questionData.title,
+                                contentHtml = questionData.detail,
+                                questionId = questionData.id.toString(),
+                                authorName = questionData.author.name,
+                                authorUrl = questionData.author.url,
+                                authorUrlToken = questionData.author.urlToken,
+                            ) ?: return@withContext
+                            persistArchive(paginationEnvironment, archiveItem)
                         }
                     }
                 }

@@ -26,6 +26,7 @@ import com.github.zly2006.zhihu.data.ArchiveClient
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ZhihuJson.json
 import com.github.zly2006.zhihu.data.createArchiveClient
 import com.github.zly2006.zhihu.data.navDestination
@@ -50,6 +51,8 @@ import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.util.buildArticleExportFileName
 import com.github.zly2006.zhihu.util.buildCollectionExportZipFileName
 import com.github.zly2006.zhihu.util.sanitizeArticleExportFileNamePart
+import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveDao
+import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedKeywordService
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedUser
 import com.github.zly2006.zhihu.viewmodel.filter.ContentDetailProvider
@@ -156,6 +159,11 @@ class DesktopPaginationEnvironment(
         baseUrl: String,
         token: String,
     ): ArchiveClient? = createArchiveClient(archiveHttpClient, baseUrl, token)
+
+    override fun localArchiveDao(): LocalArchiveDao? {
+        if (!settingsStore.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false)) return null
+        return getLocalArchiveDatabase().localArchiveDao()
+    }
 
     override fun xsrfToken(): String = store.load().cookies["_xsrf"] ?: ""
 

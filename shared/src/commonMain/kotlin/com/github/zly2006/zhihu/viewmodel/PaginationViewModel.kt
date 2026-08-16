@@ -28,6 +28,7 @@ import com.github.zly2006.zhihu.account.ZhihuIdentityClient
 import com.github.zly2006.zhihu.data.AigcVoteClient
 import com.github.zly2006.zhihu.data.AigcVoteVoter
 import com.github.zly2006.zhihu.data.ArchiveClient
+import com.github.zly2006.zhihu.data.ArchiveItem
 import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
@@ -39,6 +40,7 @@ import com.github.zly2006.zhihu.data.executeZhihuAuthenticatedRequest
 import com.github.zly2006.zhihu.data.fetchZhihuAuthenticatedJson
 import com.github.zly2006.zhihu.data.fetchZhihuContentDetail
 import com.github.zly2006.zhihu.data.getOrFetchContentDetail
+import com.github.zly2006.zhihu.data.toLocalArchiveRecord
 import com.github.zly2006.zhihu.navigation.AnswerNavigator
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.NavDestination
@@ -48,6 +50,7 @@ import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.util.ZhihuCredentialRefresher
 import com.github.zly2006.zhihu.util.signZhihuFetchRequest
 import com.github.zly2006.zhihu.viewmodel.ArticleViewModel.CachedAnswerContent
+import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveDao
 import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
@@ -457,6 +460,28 @@ interface ArchiveEnvironment {
         baseUrl: String,
         token: String,
     ): ArchiveClient? = null
+
+    fun localArchiveDao(): LocalArchiveDao? = null
+}
+
+suspend fun persistArchive(
+    environment: ArchiveEnvironment,
+    item: ArchiveItem,
+) {
+    environment.localArchiveDao()?.let { dao ->
+        runCatching {
+            dao.upsertPreservingCreatedAt(item.toLocalArchiveRecord())
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            Log.w("Archive", "写入本地存档失败", error)
+        }
+    }
+    environment.archiveClient()?.let { client ->
+        runCatching { client.saveItem(item) }.onFailure { error ->
+            if (error is CancellationException) throw error
+            Log.w("Archive", "提交存档失败", error)
+        }
+    }
 }
 
 interface ContentBlocklistEnvironment {

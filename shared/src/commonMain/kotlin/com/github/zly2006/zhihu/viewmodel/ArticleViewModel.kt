@@ -676,7 +676,7 @@ class ArticleViewModel(
     }
 
     private fun archiveLoadedContent(environment: ArchiveEnvironment) {
-        val client = environment.archiveClient() ?: return
+        if (environment.localArchiveDao() == null && environment.archiveClient() == null) return
         val item = when (val source = exportSourceContent) {
             is DataHolder.Answer -> createArchiveItem(
                 type = "answer",
@@ -700,10 +700,7 @@ class ArticleViewModel(
             else -> null
         } ?: return
         viewModelScope.launch(Dispatchers.Default) {
-            runCatching { client.saveItem(item) }.onFailure { error ->
-                if (error is CancellationException) throw error
-                Log.w("Archive", "提交存档失败", error)
-            }
+            persistArchive(environment, item)
         }
     }
 

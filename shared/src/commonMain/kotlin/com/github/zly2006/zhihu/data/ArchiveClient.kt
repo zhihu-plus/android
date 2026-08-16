@@ -30,6 +30,7 @@ import io.ktor.http.contentType
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+const val LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY = "enableLocalArchive"
 const val ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY = "enableArchiveServer"
 const val ARCHIVE_SERVER_URL_PREFERENCE_KEY = "archiveServerUrl"
 const val ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY = "archiveServerToken"

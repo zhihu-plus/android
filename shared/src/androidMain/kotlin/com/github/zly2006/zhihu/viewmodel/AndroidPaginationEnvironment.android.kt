@@ -48,6 +48,7 @@ import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.HistoryStorage
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ZhihuCookieStorage
 import com.github.zly2006.zhihu.data.ZhihuJson.json
 import com.github.zly2006.zhihu.data.createArchiveClient
@@ -67,6 +68,8 @@ import com.github.zly2006.zhihu.util.buildOfflineArticleExportHtml
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.exportCollectionItemsToZip
 import com.github.zly2006.zhihu.util.saveBitmapToGallery
+import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveDao
+import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedKeywordService
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedQuestionAuthor
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedUser
@@ -260,6 +263,11 @@ open class SharedAndroidPaginationEnvironment(
         baseUrl: String,
         token: String,
     ): ArchiveClient? = createArchiveClient(archiveHttpClient, baseUrl, token)
+
+    override fun localArchiveDao(): LocalArchiveDao? {
+        if (!settingsStore.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false)) return null
+        return getLocalArchiveDatabase(context).localArchiveDao()
+    }
 
     override fun authenticatedCookies(): Map<String, String> {
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)

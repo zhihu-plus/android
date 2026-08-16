@@ -77,13 +77,18 @@ import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
+import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.ui.components.SettingItem
 import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
+import com.github.zly2006.zhihu.ui.rememberLocalArchiveExporter
+import com.github.zly2006.zhihu.ui.rememberLocalArchiveImporter
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderPolicy
+import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -96,6 +101,9 @@ import zhihu.shared.generated.resources.ic_telegram_24dp
 
 internal const val CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY = "continuousUsageReminderIntervalMinutes"
 const val SYSTEM_SETTINGS_AIGC_MARKING_TAG = "system_settings_aigc_marking"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG = "system_settings_local_archive_enabled"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_IMPORT_TAG = "system_settings_local_archive_import"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_EXPORT_TAG = "system_settings_local_archive_export"
 const val SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG = "system_settings_archive_enabled"
 const val SYSTEM_SETTINGS_ARCHIVE_URL_TAG = "system_settings_archive_url"
 const val SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG = "system_settings_archive_token"
@@ -104,7 +112,7 @@ const val SYSTEM_SETTINGS_ARCHIVE_TEST_TAG = "system_settings_archive_test"
 /**
  * 系统、更新和外部服务设置页。
  *
- * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、遥测、存档服务器、防沉迷提醒和社区链接。
+ * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、遥测、本地存档、存档服务器、防沉迷提醒和社区链接。
  * 更新相关状态由平台 [SystemUpdateRuntime] 提供，防沉迷间隔写入 [CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY]，
  * 改动时要同时考虑 Android 更新管理器和 Desktop 运行时。
  */
@@ -118,6 +126,10 @@ fun SystemAndUpdateSettingsScreen(
     val openExternalUrl = rememberExternalUrlOpener()
     val navigator = LocalNavigator.current
     val archiveEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
+    val userMessages = rememberUserMessageSink()
+    val requestLocalArchiveImport = rememberLocalArchiveImporter(userMessages)
+    val exportLocalArchive = rememberLocalArchiveExporter()
+    val localArchiveDatabase = remember { getLocalArchiveDatabase() }
     val highlightedSetting = setting.orEmpty()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -406,6 +418,20 @@ fun SystemAndUpdateSettingsScreen(
                 )
             }
 
+            var localArchiveEnabled by remember {
+                mutableStateOf(settings.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false))
+            }
+            var localArchiveCount by remember { mutableStateOf(0L) }
+            var localArchiveRefreshKey by remember { mutableIntStateOf(0) }
+            var localArchiveActionResult by remember { mutableStateOf("") }
+            var localArchiveBusy by remember { mutableStateOf(false) }
+
+            LaunchedEffect(localArchiveRefreshKey) {
+                localArchiveCount = withContext(Dispatchers.Default) {
+                    localArchiveDatabase.localArchiveDao().count()
+                }
+            }
+
             var archiveEnabled by remember {
                 mutableStateOf(settings.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
             }
@@ -434,6 +460,73 @@ fun SystemAndUpdateSettingsScreen(
             SettingItemGroup(
                 title = "内容存档",
             ) {
+                SettingItemWithSwitch(
+                    modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG),
+                    title = { Text("启用本地存档") },
+                    description = {
+                        Text("开启后，阅读问题、回答和文章时会写入本机 SQLite。不需要服务器，也可以和存档服务器同时开启。默认关闭。")
+                    },
+                    checked = localArchiveEnabled,
+                    onCheckedChange = {
+                        localArchiveEnabled = it
+                        settings.putBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, it)
+                    },
+                    settingKey = LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY,
+                    highlightedKey = highlightedSetting,
+                )
+
+                SettingItem(
+                    title = { Text("导入 / 导出本地存档") },
+                    description = {
+                        Text(
+                            if (localArchiveActionResult.isBlank()) {
+                                "已保存 $localArchiveCount 条。导出为 JSON，导入按链接去重覆盖。"
+                            } else {
+                                "$localArchiveActionResult（当前 $localArchiveCount 条）"
+                            },
+                        )
+                    },
+                    settingKey = "localArchiveImportExport",
+                    highlightedKey = highlightedSetting,
+                    bottomAction = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    requestLocalArchiveImport { summary ->
+                                        localArchiveActionResult = summary
+                                        localArchiveRefreshKey += 1
+                                    }
+                                },
+                                enabled = !localArchiveBusy,
+                                modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_IMPORT_TAG),
+                            ) {
+                                Text("导入")
+                            }
+                            TextButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        localArchiveBusy = true
+                                        localArchiveActionResult = runCatching {
+                                            withContext(Dispatchers.Default) { exportLocalArchive() }
+                                        }.getOrElse { error ->
+                                            "导出失败：${error.message ?: "未知错误"}"
+                                        }
+                                        localArchiveRefreshKey += 1
+                                        localArchiveBusy = false
+                                    }
+                                },
+                                enabled = !localArchiveBusy,
+                                modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_EXPORT_TAG),
+                            ) {
+                                Text(if (localArchiveBusy) "处理中..." else "导出")
+                            }
+                        }
+                    },
+                )
+
                 SettingItemWithSwitch(
                     modifier = Modifier.testTag(SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG),
                     title = { Text("启用存档服务器") },

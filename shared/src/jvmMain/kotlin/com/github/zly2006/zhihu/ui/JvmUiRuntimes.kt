@@ -33,6 +33,8 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.em
+import com.github.zly2006.zhihu.data.encodeLocalArchiveBackup
+import com.github.zly2006.zhihu.data.importLocalArchiveBackupFromJsonText
 import com.github.zly2006.zhihu.desktop.DesktopAccountStore
 import com.github.zly2006.zhihu.desktop.DesktopLoginRequests
 import com.github.zly2006.zhihu.desktop.openDesktopExternalUrl
@@ -44,6 +46,8 @@ import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.ui.subscreens.desktopVersionName
 import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.viewmodel.DesktopPaginationEnvironment
+import com.github.zly2006.zhihu.viewmodel.archive.desktopLocalArchiveDatabaseFile
+import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.desktopContentFilterDatabaseFile
 import com.github.zly2006.zhihu.viewmodel.filter.encodeBlocklistBackup
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
@@ -235,7 +239,7 @@ actual fun rememberBlocklistRuleImporter(
     val coroutineScope = rememberCoroutineScope()
     return remember(database, userMessages) {
         { onImported ->
-            val selectedFile = chooseBlocklistImportFile()
+            val selectedFile = chooseJsonImportFile("导入屏蔽规则")
             if (selectedFile != null) {
                 coroutineScope.launch {
                     try {
@@ -280,9 +284,48 @@ actual fun rememberBlocklistRuleExporter(): suspend () -> String {
     }
 }
 
-private fun chooseBlocklistImportFile(): File? {
+@Composable
+actual fun rememberLocalArchiveImporter(
+    userMessages: UserMessageSink,
+): (((String) -> Unit) -> Unit) {
+    val database = remember { getLocalArchiveDatabase() }
+    val coroutineScope = rememberCoroutineScope()
+    return remember(database, userMessages) {
+        { onImported ->
+            val selectedFile = chooseJsonImportFile("导入本地存档")
+            if (selectedFile != null) {
+                coroutineScope.launch {
+                    try {
+                        val summary = importLocalArchiveBackupFromJsonText(
+                            dao = database.localArchiveDao(),
+                            text = selectedFile.readText(),
+                        )
+                        onImported(summary)
+                    } catch (e: Exception) {
+                        Log.e("LocalArchive", "Failed to import local archive", e)
+                        userMessages.showShortMessage("导入失败: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+actual fun rememberLocalArchiveExporter(): suspend () -> String {
+    val database = remember { getLocalArchiveDatabase() }
+    return remember(database) {
+        suspend {
+            val file = File(desktopLocalArchiveDatabaseFile().parentFile, "zhihupp_archive.json")
+            file.writeText(encodeLocalArchiveBackup(database.localArchiveDao()))
+            "已导出到 ${file.absolutePath}"
+        }
+    }
+}
+
+private fun chooseJsonImportFile(title: String): File? {
     val chooser = JFileChooser().apply {
-        dialogTitle = "导入屏蔽规则"
+        dialogTitle = title
         fileSelectionMode = JFileChooser.FILES_ONLY
         fileFilter = FileNameExtensionFilter("JSON 或文本文件", "json", "txt")
     }

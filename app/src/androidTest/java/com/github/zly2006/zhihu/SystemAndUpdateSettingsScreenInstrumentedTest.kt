@@ -36,6 +36,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.performVerticalSwipeCycle
 import com.github.zly2006.zhihu.test.resetAppPreferences
@@ -218,6 +219,23 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         scrollContainer.performScrollToNode(hasText("启用存档服务器"))
         clickSettingRow("启用存档服务器")
         waitUntilBooleanPreference(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, expected = true)
+    }
+
+    @Test
+    fun localArchiveSwitchPersistsWithoutServer() {
+        setUpScreen()
+        val scrollContainer = scrollContainer()
+
+        scrollContainer.performScrollToNode(hasText("启用本地存档"))
+        composeRule.onNodeWithText("启用本地存档").assertIsDisplayed()
+        assertFalse(preferences.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false))
+
+        clickSettingRow("启用本地存档")
+        waitUntilBooleanPreference(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasText("导入 / 导出本地存档"))
+        composeRule.onNodeWithText("导入 / 导出本地存档").assertIsDisplayed()
+        assertFalse(preferences.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
     }
 
     private fun setUpScreen() = composeRule.setScreenContent {

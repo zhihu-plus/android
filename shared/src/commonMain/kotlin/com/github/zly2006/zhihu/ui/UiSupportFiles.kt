@@ -529,6 +529,14 @@ expect fun rememberBlocklistRuleImporter(
 @Composable
 expect fun rememberBlocklistRuleExporter(): suspend () -> String
 
+@Composable
+expect fun rememberLocalArchiveImporter(
+    userMessages: UserMessageSink,
+): (((String) -> Unit) -> Unit)
+
+@Composable
+expect fun rememberLocalArchiveExporter(): suspend () -> String
+
 /**
  * 沉浸式阅读时控制系统栏（状态栏/导航栏）的显隐。
  * Android 会隐藏状态栏并允许滑动唤出；Desktop/iOS 为空操作。
