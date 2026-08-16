@@ -19,7 +19,6 @@ package com.github.zly2006.zhihu
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
-import android.content.Intent
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
@@ -67,7 +66,6 @@ import com.github.zly2006.zhihu.ui.components.WebviewComp
 import com.github.zly2006.zhihu.ui.components.setupUpWebviewClient
 import com.github.zly2006.zhihu.util.enableEdgeToEdgeCompat
 import com.github.zly2006.zhihu.util.luoTianYiUrlLauncher
-import com.github.zly2006.zhihu.util.telemetry
 import kotlinx.coroutines.launch
 
 private const val LOGIN_MODE_WEB = 0
@@ -92,7 +90,7 @@ class LoginActivity : ComponentActivity() {
                         .semantics { testTagsAsResourceId = true }
                         .systemBarsPadding(),
                 ) {
-                    if (currentNoticeStep >= 3) {
+                    if (currentNoticeStep >= 2) {
                         LoginModeScreen(
                             activity = this@LoginActivity,
                             loginMode = loginMode,
@@ -115,7 +113,7 @@ class LoginActivity : ComponentActivity() {
                                         currentNoticeStep = 1
                                     },
                                 )
-                            1 ->
+                            else ->
                                 LoginNoticeScreen(
                                     stepTag = "login_notice_step_2",
                                     message = "在使用本应用的过程中，我承诺遵守知乎使用协议 https://www.zhihu.com/term/zhihu-terms 。我保证在使用过程中不侵犯知乎及其他作者的著作权，使用本应用产生的一切输出仅用于个人浏览和备份，不会进行传播等其他影响作者著作权的行为。",
@@ -128,20 +126,6 @@ class LoginActivity : ComponentActivity() {
                                     },
                                     onConfirm = {
                                         currentNoticeStep = 2
-                                    },
-                                )
-                            else ->
-                                LoginNoticeScreen(
-                                    stepTag = "login_notice_step_3",
-                                    message = "我知晓，本应用默认不会发送遥测。如需帮助统计使用人数，我可以在设置中开启匿名使用统计。",
-                                    secondaryButtonText = "查看设置",
-                                    onSecondaryAction = {
-                                        startActivity(
-                                            Intent(this@LoginActivity, MainActivity::class.java),
-                                        )
-                                    },
-                                    onConfirm = {
-                                        currentNoticeStep = 3
                                     },
                                 )
                         }
@@ -248,7 +232,6 @@ class LoginActivity : ComponentActivity() {
                         }
                     }.create()
                     .show()
-                telemetry(this, "login")
                 true
             } else {
                 AlertDialog
