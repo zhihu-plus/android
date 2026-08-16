@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      存档服务器由用户自建，地址经常是局域网 HTTP（如 http://192.168.0.10:32100）。
+      Android 无法按运行时输入的 IP/主机动态放行明文，因此这里允许应用内 HTTP。
+      这不是把知乎 API 改回 HTTP；官方接口仍走 HTTPS。
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

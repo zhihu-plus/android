@@ -37,15 +37,20 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.data.AigcVoteClient
 import com.github.zly2006.zhihu.data.AigcVoteVoter
+import com.github.zly2006.zhihu.data.ArchiveClient
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.HistoryStorage
 import com.github.zly2006.zhihu.data.ZhihuCookieStorage
 import com.github.zly2006.zhihu.data.ZhihuJson.json
+import com.github.zly2006.zhihu.data.createArchiveClient
 import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.filter.ContentOpenEventSupport
@@ -133,6 +138,13 @@ open class SharedAndroidPaginationEnvironment(
             baseUrl = aigcVoteServerUrl(),
             clientId = aigcVoteClientId(),
         )
+    }
+    private val archiveHttpClient by lazy {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(json)
+            }
+        }
     }
 
     override suspend fun refreshAccountProfile() {
@@ -233,6 +245,21 @@ open class SharedAndroidPaginationEnvironment(
                 avatarUrl = self.avatarUrl,
             )
         }
+
+    override fun archiveClient(): ArchiveClient? {
+        if (!settingsStore.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false)) return null
+        val token = settingsStore.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "").trim()
+        if (token.isBlank()) return null
+        return archiveClient(
+            baseUrl = settingsStore.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, ""),
+            token = token,
+        )
+    }
+
+    override fun archiveClient(
+        baseUrl: String,
+        token: String,
+    ): ArchiveClient? = createArchiveClient(archiveHttpClient, baseUrl, token)
 
     override fun authenticatedCookies(): Map<String, String> {
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)

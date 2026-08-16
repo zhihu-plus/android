@@ -32,6 +32,8 @@
             android:supportsRtl="true"
             android:theme="@style/Theme.Zhihu"
             android:enableOnBackInvokedCallback="true"
+            android:networkSecurityConfig="@xml/network_security_config"
+            android:usesCleartextTraffic="true"
             tools:targetApi="33">
         <meta-data
                 android:name="com.github.zly2006.zhihu.BUILD_TYPE"

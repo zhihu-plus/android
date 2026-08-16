@@ -27,6 +27,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.zly2006.zhihu.account.ZhihuIdentityClient
 import com.github.zly2006.zhihu.data.AigcVoteClient
 import com.github.zly2006.zhihu.data.AigcVoteVoter
+import com.github.zly2006.zhihu.data.ArchiveClient
 import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
@@ -449,6 +450,15 @@ interface AigcVoteEnvironment {
     fun aigcVoteVoter(): AigcVoteVoter? = null
 }
 
+interface ArchiveEnvironment {
+    fun archiveClient(): ArchiveClient? = null
+
+    fun archiveClient(
+        baseUrl: String,
+        token: String,
+    ): ArchiveClient? = null
+}
+
 interface ContentBlocklistEnvironment {
     suspend fun isUserBlocked(userId: String): Boolean = false
 
@@ -538,7 +548,8 @@ interface ContentLoadEnvironment :
     ZhihuApiEnvironment,
     HistoryEnvironment,
     ContentOpenEnvironment,
-    AigcVoteEnvironment
+    AigcVoteEnvironment,
+    ArchiveEnvironment
 
 interface ProfileLoadEnvironment :
     ContentLoadEnvironment,

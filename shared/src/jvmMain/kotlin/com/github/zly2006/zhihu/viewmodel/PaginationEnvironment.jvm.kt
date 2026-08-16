@@ -19,9 +19,15 @@ package com.github.zly2006.zhihu.viewmodel
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ArchiveClient
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
+import com.github.zly2006.zhihu.data.ZhihuJson.json
+import com.github.zly2006.zhihu.data.createArchiveClient
 import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.desktop.DesktopAccountStore
@@ -58,8 +64,10 @@ import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
 import com.github.zly2006.zhihu.viewmodel.local.buildLocalRecommendationEngine
 import com.github.zly2006.zhihu.viewmodel.local.getLocalContentDatabase
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.setBody
 import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -124,8 +132,30 @@ class DesktopPaginationEnvironment(
     private val historyStorage = DesktopHistoryStorage()
     private val contentFilterDb = desktopContentFilterDb
     private val localRecommendationEngine by lazy { createLocalRecommendationEngine() }
+    private val archiveHttpClient by lazy {
+        HttpClient {
+            install(ContentNegotiation) {
+                json(json)
+            }
+        }
+    }
 
     override fun httpClient(): HttpClient = store.httpClient()
+
+    override fun archiveClient(): ArchiveClient? {
+        if (!settingsStore.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false)) return null
+        val token = settingsStore.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "").trim()
+        if (token.isBlank()) return null
+        return archiveClient(
+            baseUrl = settingsStore.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, ""),
+            token = token,
+        )
+    }
+
+    override fun archiveClient(
+        baseUrl: String,
+        token: String,
+    ): ArchiveClient? = createArchiveClient(archiveHttpClient, baseUrl, token)
 
     override fun xsrfToken(): String = store.load().cookies["_xsrf"] ?: ""
 

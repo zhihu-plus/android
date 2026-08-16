@@ -504,7 +504,7 @@ fun AccountSettingScreen(
 
                 SettingItem(
                     title = { Text("系统与更新") },
-                    description = { Text("GitHub、更新设置等") },
+                    description = { Text("GitHub、更新、存档服务器等") },
                     icon = { Icon(Icons.Default.Settings, null) },
                     modifier = Modifier.testTag(ACCOUNT_SETTINGS_SYSTEM_TAG),
                     onClick = { navigator.onNavigate(Account.SystemAndUpdateSettings()) },

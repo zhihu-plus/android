@@ -27,15 +27,22 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.performVerticalSwipeCycle
 import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.test.setScreenContent
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_URL_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SystemAndUpdateSettingsScreen
 import com.github.zly2006.zhihu.updater.SchematicVersion
 import com.github.zly2006.zhihu.updater.UpdateManager
@@ -189,6 +196,28 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         assertTrue(UpdateManager.isAutoCheckEnabled(composeRule.activity))
         assertTrue(preferences.getBoolean(CHECK_NIGHTLY_UPDATES_PREFERENCE_KEY, false))
         assertFalse(preferences.getBoolean(ALLOW_TELEMETRY_PREFERENCE_KEY, true))
+    }
+
+    @Test
+    fun archiveServerSettingsPersistUrlTokenAndEnabledSwitch() {
+        setUpScreen()
+        val scrollContainer = scrollContainer()
+
+        scrollContainer.performScrollToNode(hasText("启用存档服务器"))
+        composeRule.onNodeWithText("启用存档服务器").assertIsDisplayed()
+        assertFalse(preferences.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
+
+        scrollContainer.performScrollToNode(hasText("存档服务器地址"))
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_URL_TAG).performTextInput("http://192.168.0.10:32100")
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG).performTextInput("local-dev-token")
+        waitUntil(timeoutMillis = 5_000) {
+            preferences.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, "") == "http://192.168.0.10:32100" &&
+                preferences.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "") == "local-dev-token"
+        }
+
+        scrollContainer.performScrollToNode(hasText("启用存档服务器"))
+        clickSettingRow("启用存档服务器")
+        waitUntilBooleanPreference(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, expected = true)
     }
 
     private fun setUpScreen() = composeRule.setScreenContent {

@@ -49,6 +49,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.NavDestination
@@ -239,6 +242,9 @@ private val settingsSearchEntries = buildList {
     add(systemEntry("system.checkNightlyUpdates", "检查 Nightly 版本更新", "检查每日构建版本。", "checkNightlyUpdates", listOf("每日构建")))
     add(systemEntry("system.allowTelemetry", "允许发送遥测统计数据", "控制匿名使用统计。", "allowTelemetry", listOf("统计", "隐私", "数据收集", "使用数据")))
     add(systemEntry("system.aigcMarking", "启用 AIGC 标记", "开启后可查看其他用户对内容是否疑似 AIGC 的标记。", AIGC_MARKING_ENABLED_PREFERENCE_KEY, listOf("AI", "AIGC")))
+    add(systemEntry("system.archiveServer", "启用存档服务器", "把阅读过的问题、回答和文章提交到自建存档服务器。", ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, listOf("备份", "存档", "archive")))
+    add(systemEntry("system.archiveServerUrl", "存档服务器地址", "配置存档服务器的 API 地址。", ARCHIVE_SERVER_URL_PREFERENCE_KEY, listOf("备份地址", "存档地址")))
+    add(systemEntry("system.archiveServerToken", "存档服务器令牌", "配置存档服务器的访问令牌。", ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, listOf("备份令牌", "存档令牌")))
     add(systemEntry("system.reminder", "防沉迷提醒", "设置连续使用提醒的间隔。", CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY, listOf("连续使用", "休息提醒")))
 
     add(notificationEntry("notification.autoMarkAsRead", "打开通知自动已读", "进入通知页后自动标记当前批次为已读。", "autoMarkAsRead", listOf("已读", "标记已读")))

@@ -74,6 +74,9 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
@@ -81,7 +84,10 @@ import com.github.zly2006.zhihu.ui.components.SettingItem
 import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
 import com.github.zly2006.zhihu.util.ContinuousUsageReminderPolicy
+import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import zhihu.shared.generated.resources.Res
 import zhihu.shared.generated.resources.ic_discord_24dp
@@ -90,11 +96,15 @@ import zhihu.shared.generated.resources.ic_telegram_24dp
 
 internal const val CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY = "continuousUsageReminderIntervalMinutes"
 const val SYSTEM_SETTINGS_AIGC_MARKING_TAG = "system_settings_aigc_marking"
+const val SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG = "system_settings_archive_enabled"
+const val SYSTEM_SETTINGS_ARCHIVE_URL_TAG = "system_settings_archive_url"
+const val SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG = "system_settings_archive_token"
+const val SYSTEM_SETTINGS_ARCHIVE_TEST_TAG = "system_settings_archive_test"
 
 /**
  * 系统、更新和外部服务设置页。
  *
- * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、遥测、防沉迷提醒和社区链接。
+ * 页面展示更新横幅、下载/安装/跳过版本操作、GitHub Token、自动检查更新、Nightly、遥测、存档服务器、防沉迷提醒和社区链接。
  * 更新相关状态由平台 [SystemUpdateRuntime] 提供，防沉迷间隔写入 [CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES_KEY]，
  * 改动时要同时考虑 Android 更新管理器和 Desktop 运行时。
  */
@@ -107,6 +117,7 @@ fun SystemAndUpdateSettingsScreen(
     val updates = rememberSystemUpdateRuntime()
     val openExternalUrl = rememberExternalUrlOpener()
     val navigator = LocalNavigator.current
+    val archiveEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
     val highlightedSetting = setting.orEmpty()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -392,6 +403,153 @@ fun SystemAndUpdateSettingsScreen(
                     },
                     settingKey = AIGC_MARKING_ENABLED_PREFERENCE_KEY,
                     highlightedKey = highlightedSetting,
+                )
+            }
+
+            var archiveEnabled by remember {
+                mutableStateOf(settings.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
+            }
+            var archiveServerUrl by remember {
+                mutableStateOf(settings.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, ""))
+            }
+            var archiveServerToken by remember {
+                mutableStateOf(settings.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, ""))
+            }
+            var showArchiveToken by remember { mutableStateOf(false) }
+            var archiveTestResult by remember { mutableStateOf("") }
+            var archiveTesting by remember { mutableStateOf(false) }
+            val archiveConfigured = archiveServerUrl.trim().isNotBlank() && archiveServerToken.trim().isNotBlank()
+
+            fun persistArchiveEnabled(enabled: Boolean) {
+                archiveEnabled = enabled
+                settings.putBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, enabled)
+            }
+
+            LaunchedEffect(archiveEnabled, archiveConfigured) {
+                if (archiveEnabled && !archiveConfigured) {
+                    persistArchiveEnabled(false)
+                }
+            }
+
+            SettingItemGroup(
+                title = "内容存档",
+            ) {
+                SettingItemWithSwitch(
+                    modifier = Modifier.testTag(SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG),
+                    title = { Text("启用存档服务器") },
+                    description = {
+                        Text(
+                            if (archiveConfigured) {
+                                "开启后，阅读问题、回答和文章时会把正文提交到你配置的存档服务器。默认关闭。"
+                            } else {
+                                "请先填写服务器地址和令牌，再开启。开启后阅读问题、回答和文章时会自动提交正文。"
+                            },
+                        )
+                    },
+                    checked = archiveEnabled,
+                    onCheckedChange = { persistArchiveEnabled(it) },
+                    enabled = archiveConfigured || archiveEnabled,
+                    settingKey = ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY,
+                    highlightedKey = highlightedSetting,
+                )
+
+                SettingItem(
+                    title = { Text("存档服务器地址") },
+                    description = { Text("例如 http://192.168.0.10:32100，支持 HTTP 局域网地址。") },
+                    settingKey = ARCHIVE_SERVER_URL_PREFERENCE_KEY,
+                    highlightedKey = highlightedSetting,
+                    bottomAction = {
+                        OutlinedTextField(
+                            value = archiveServerUrl,
+                            onValueChange = {
+                                archiveServerUrl = it
+                                settings.putString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, it.trim())
+                                archiveTestResult = ""
+                                if (it.trim().isBlank() && archiveEnabled) {
+                                    persistArchiveEnabled(false)
+                                }
+                            },
+                            placeholder = { Text("http://127.0.0.1:32100") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                                .testTag(SYSTEM_SETTINGS_ARCHIVE_URL_TAG),
+                            singleLine = true,
+                        )
+                    },
+                )
+
+                SettingItem(
+                    title = { Text("存档服务器令牌") },
+                    description = { Text("对应存档服务器的 X-Zhihu-Backup-Token，不会上传到知乎++官方服务。") },
+                    settingKey = ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY,
+                    highlightedKey = highlightedSetting,
+                    bottomAction = {
+                        OutlinedTextField(
+                            value = archiveServerToken,
+                            onValueChange = {
+                                archiveServerToken = it
+                                settings.putString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, it.trim())
+                                archiveTestResult = ""
+                                if (it.trim().isBlank() && archiveEnabled) {
+                                    persistArchiveEnabled(false)
+                                }
+                            },
+                            visualTransformation = if (showArchiveToken) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showArchiveToken = !showArchiveToken }) {
+                                    Icon(
+                                        imageVector = if (showArchiveToken) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = null,
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 16.dp)
+                                .testTag(SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG),
+                            singleLine = true,
+                        )
+                    },
+                )
+
+                SettingItem(
+                    title = { Text("测试连接") },
+                    description = {
+                        Text(
+                            archiveTestResult.ifBlank { "向存档服务器发送健康检查请求，不需要令牌。" },
+                        )
+                    },
+                    endAction = {
+                        TextButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    archiveTesting = true
+                                    archiveTestResult = "正在测试..."
+                                    val client = archiveEnvironment.archiveClient(
+                                        baseUrl = archiveServerUrl,
+                                        token = archiveServerToken,
+                                    )
+                                    archiveTestResult = when {
+                                        client == null && archiveServerUrl.isBlank() -> "请先填写服务器地址"
+                                        client == null -> "当前平台暂不支持测试连接"
+                                        else -> runCatching {
+                                            withContext(Dispatchers.Default) {
+                                                if (client.checkHealth()) "连接成功" else "服务器未返回正常状态"
+                                            }
+                                        }.getOrElse { error ->
+                                            "连接失败：${error.message ?: "未知错误"}"
+                                        }
+                                    }
+                                    archiveTesting = false
+                                }
+                            },
+                            enabled = !archiveTesting && archiveServerUrl.trim().isNotBlank(),
+                            modifier = Modifier.testTag(SYSTEM_SETTINGS_ARCHIVE_TEST_TAG),
+                        ) {
+                            Text(if (archiveTesting) "测试中..." else "测试")
+                        }
+                    },
                 )
             }
 

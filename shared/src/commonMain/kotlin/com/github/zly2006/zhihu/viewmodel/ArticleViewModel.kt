@@ -36,6 +36,7 @@ import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.OfficialBadge
 import com.github.zly2006.zhihu.data.VoteUpState
 import com.github.zly2006.zhihu.data.ZhihuJson
+import com.github.zly2006.zhihu.data.createArchiveItem
 import com.github.zly2006.zhihu.data.decodeZhihuCommentData
 import com.github.zly2006.zhihu.data.officialBadge
 import com.github.zly2006.zhihu.markdown.htmlToMdAst
@@ -291,6 +292,7 @@ class ArticleViewModel(
                                 ),
                             )
                             environment.recordOpenEvent(article, answer.question.id)
+                            archiveLoadedContent(environment)
                             withContext(Dispatchers.Main.immediate) {
                                 // 设置问题回答导航器（如果当前不是收藏夹导航器）
                                 if (sharedData?.navigator !is CollectionAnswerNavigator) {
@@ -368,6 +370,7 @@ class ArticleViewModel(
                                 ),
                             )
                             environment.recordOpenEvent(this@ArticleViewModel.article, null)
+                            archiveLoadedContent(environment)
                         } else {
                             content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
                             Log.e("ArticleViewModel", "Article not found")
@@ -668,6 +671,38 @@ class ArticleViewModel(
                 aigcVoteError = e.message ?: "AIGC 投票状态加载失败"
             } finally {
                 aigcVoteLoading = false
+            }
+        }
+    }
+
+    private fun archiveLoadedContent(environment: ArchiveEnvironment) {
+        val client = environment.archiveClient() ?: return
+        val item = when (val source = exportSourceContent) {
+            is DataHolder.Answer -> createArchiveItem(
+                type = "answer",
+                title = source.question.title,
+                contentHtml = source.content,
+                questionId = source.question.id.toString(),
+                answerId = source.id.toString(),
+                authorName = source.author.name,
+                authorUrl = source.author.url,
+                authorUrlToken = source.author.urlToken,
+            )
+            is DataHolder.Article -> createArchiveItem(
+                type = "article",
+                title = source.title,
+                contentHtml = source.content,
+                articleId = source.id.toString(),
+                authorName = source.author.name,
+                authorUrl = source.author.url,
+                authorUrlToken = source.author.urlToken,
+            )
+            else -> null
+        } ?: return
+        viewModelScope.launch(Dispatchers.Default) {
+            runCatching { client.saveItem(item) }.onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.w("Archive", "提交存档失败", error)
             }
         }
     }
