@@ -308,14 +308,14 @@ private fun FeedCardContent(
     val titleClickModifier = if (questionDestination != null) {
         Modifier
             .testTag(FEED_CARD_TITLE_TAG)
-            .clickable { navigator.onNavigate(questionDestination) }
+            .clickable(onClickLabel = "打开问题") { navigator.onNavigate(questionDestination) }
     } else {
         Modifier
     }
     val authorClickModifier = if (authorDestination != null) {
         Modifier
             .testTag(FEED_CARD_AUTHOR_TAG)
-            .clickable { navigator.onNavigate(authorDestination) }
+            .clickable(onClickLabel = "打开个人主页") { navigator.onNavigate(authorDestination) }
     } else {
         Modifier
     }

@@ -59,6 +59,30 @@ class FeedNavigationTest {
     }
 
     @Test
+    fun questionFeedTitleOpensQuestionAndAuthorOpensProfile() {
+        val item = FeedDisplayItem(
+            title = "测试问题",
+            summary = "问题摘要",
+            details = "问题 · 1 关注",
+            feed = CommonFeed(
+                target = Feed.QuestionTarget(
+                    id = 2001,
+                    _title = "测试问题",
+                    url = "https://www.zhihu.com/question/2001",
+                    type = "question",
+                    author = feedAuthor(),
+                ),
+            ),
+            avatarSrc = "https://example.invalid/avatar.png",
+            authorName = "作者",
+        )
+
+        assertEquals(Question(questionId = 2001, title = "测试问题"), item.navDestination)
+        assertEquals(Question(questionId = 2001, title = "测试问题"), item.questionDestination)
+        assertEquals(PersonDestination(id = "author-1", urlToken = "author-token", name = "作者"), item.authorDestination)
+    }
+
+    @Test
     fun articleFeedKeepsTitleOnArticleAndStillOpensAuthor() {
         val item = FeedDisplayItem(
             title = "文章标题",
