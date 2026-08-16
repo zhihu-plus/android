@@ -241,7 +241,7 @@ private val settingsSearchEntries = buildList {
     add(systemEntry("system.githubToken", "GitHub Token", "配置更新检查时使用的 GitHub API 令牌。", "githubToken", listOf("限速", "更新检查", "令牌")))
     add(systemEntry("system.autoCheckUpdates", "自动检查更新", "应用启动后后台检查新版本。", "autoCheckUpdates", listOf("更新提醒")))
     add(systemEntry("system.checkNightlyUpdates", "检查 Nightly 版本更新", "检查每日构建版本。", "checkNightlyUpdates", listOf("每日构建")))
-    add(systemEntry("system.allowTelemetry", "允许发送遥测统计数据", "控制匿名使用统计。", "allowTelemetry", listOf("统计", "隐私", "数据收集", "使用数据")))
+    add(systemEntry("system.allowTelemetry", "允许发送遥测统计数据", "控制匿名使用统计，默认关闭。", "allowTelemetry", listOf("统计", "隐私", "数据收集", "使用数据")))
     add(systemEntry("system.aigcMarking", "启用 AIGC 标记", "开启后可查看其他用户对内容是否疑似 AIGC 的标记。", AIGC_MARKING_ENABLED_PREFERENCE_KEY, listOf("AI", "AIGC")))
     add(systemEntry("system.localArchive", "启用本地存档", "把阅读过的问题、回答和文章写入本机 SQLite，不需要服务器。", LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, listOf("本地备份", "sqlite", "离线存档")))
     add(systemEntry("system.localArchiveImportExport", "导入 / 导出本地存档", "把本机存档导出为 JSON，或从 JSON 导入并按链接去重。", "localArchiveImportExport", listOf("导入存档", "导出存档")))

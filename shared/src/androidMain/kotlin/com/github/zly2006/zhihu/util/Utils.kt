@@ -48,7 +48,7 @@ fun telemetry(context: Context, usage: String) {
     }
     val settings = androidSettingsStore(context)
     val data = AccountData.loadData(context)
-    if (settings.getBoolean("allowTelemetry", true)) {
+    if (settings.getBoolean("allowTelemetry", false)) {
         val versionName = runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull() ?: "unknown"
