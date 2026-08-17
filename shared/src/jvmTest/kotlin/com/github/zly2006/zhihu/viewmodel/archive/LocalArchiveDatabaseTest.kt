@@ -61,6 +61,30 @@ class LocalArchiveDatabaseTest {
     }
 
     @Test
+    fun upsertPreservesForwardedAtWhenContentUnchanged() = runTest {
+        val database = testDatabase("forwarded")
+        val dao = database.localArchiveDao()
+        val first = requireNotNull(
+            createArchiveItem(
+                type = "answer",
+                title = "已转发",
+                contentHtml = "<p>这是一段足够长的回答正文，用来通过存档服务器要求的三十字以上长度校验。</p>",
+                questionId = "3",
+                answerId = "4",
+            ),
+        ).toLocalArchiveRecord(now = 1000).copy(forwardedAt = 1500)
+        dao.upsert(first)
+        dao.upsertPreservingCreatedAt(first.copy(updatedAt = 2000, forwardedAt = 0))
+
+        val stored = requireNotNull(dao.getByNormalizedUrl(first.normalizedUrl))
+        assertEquals(1500, stored.forwardedAt)
+        assertEquals(1000, stored.createdAt)
+        assertEquals(2000, stored.updatedAt)
+        assertEquals(0, dao.pendingForwardCount())
+        database.close()
+    }
+
+    @Test
     fun exportAndImportRoundTripByNormalizedUrl() = runTest {
         val source = testDatabase("export")
         val target = testDatabase("import")

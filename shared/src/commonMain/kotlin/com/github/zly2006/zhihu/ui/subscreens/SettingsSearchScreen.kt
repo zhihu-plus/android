@@ -54,6 +54,8 @@ import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.LocalNavigator
@@ -249,6 +251,9 @@ private val settingsSearchEntries = buildList {
     add(systemEntry("system.localArchive", "启用本地存档", "把问答留在本机，避免被删后只剩知识的荒原。不需要服务器。", LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, listOf("本地备份", "sqlite", "离线存档", "荒原")))
     add(systemEntry("system.localArchiveStrategy", "本地保存策略", "加载会保存预取到的问答，阅读只保存打开过的问答，点赞或收藏只在对应操作成功后保存。与服务器策略互不影响。", LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, listOf("存档策略", "加载", "阅读", "点赞", "收藏")))
     add(systemEntry("system.localArchiveImportExport", "导入 / 导出本地存档", "把本机存档导出为 JSON，或从 JSON 导入并按链接去重。", "localArchiveImportExport", listOf("导入存档", "导出存档")))
+    add(systemEntry("system.localArchiveForward", "转发保存到服务器", "把本机 SQLite 尚未同步的存档提交到存档服务器。局域网离线时不会反复尝试。", LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY, listOf("转发存档", "同步存档", "sqlite转发")))
+    add(systemEntry("system.localArchiveForwardDelete", "转发成功后删除本地记录", "成功提交到服务器后是否从本机 SQLite 删除。", LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, listOf("删除本地存档", "转发后删除")))
+    add(systemEntry("system.localArchiveForwardNow", "立即转发", "立即把待同步的本机存档提交到服务器。", "localArchiveForwardNow", listOf("立即同步", "手动转发")))
     add(systemEntry("system.archiveServer", "启用存档服务器", "按自定义策略把问答提交到自建存档服务器。", ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, listOf("备份", "存档", "archive")))
     add(systemEntry("system.archiveServerStrategy", "服务器保存策略", "加载会保存预取到的问答，阅读只保存打开过的问答，点赞或收藏只在对应操作成功后保存。与本地策略互不影响。", ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, listOf("服务器策略", "加载", "阅读", "点赞", "收藏")))
     add(systemEntry("system.archiveServerUrl", "存档服务器地址", "配置存档服务器的 API 地址。", ARCHIVE_SERVER_URL_PREFERENCE_KEY, listOf("备份地址", "存档地址")))

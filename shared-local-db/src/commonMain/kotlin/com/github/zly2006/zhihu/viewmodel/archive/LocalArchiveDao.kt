@@ -37,9 +37,50 @@ interface LocalArchiveDao {
     @Query("SELECT COUNT(*) FROM ${LocalArchiveRecord.TABLE_NAME}")
     suspend fun count(): Long
 
+    @Query(
+        """
+        SELECT * FROM ${LocalArchiveRecord.TABLE_NAME}
+        WHERE forwardedAt = 0
+        ORDER BY updatedAt ASC
+        LIMIT :limit
+        """,
+    )
+    suspend fun getPendingForward(limit: Int): List<LocalArchiveRecord>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM ${LocalArchiveRecord.TABLE_NAME}
+        WHERE forwardedAt = 0
+        """,
+    )
+    suspend fun pendingForwardCount(): Long
+
+    @Query(
+        """
+        UPDATE ${LocalArchiveRecord.TABLE_NAME}
+        SET forwardedAt = :forwardedAt
+        WHERE normalizedUrl = :normalizedUrl
+        """,
+    )
+    suspend fun markForwarded(
+        normalizedUrl: String,
+        forwardedAt: Long,
+    )
+
+    @Query("DELETE FROM ${LocalArchiveRecord.TABLE_NAME} WHERE normalizedUrl = :normalizedUrl")
+    suspend fun deleteByNormalizedUrl(normalizedUrl: String)
+
     suspend fun upsertPreservingCreatedAt(record: LocalArchiveRecord) {
         val existing = getByNormalizedUrl(record.normalizedUrl)
-        upsert(record.copy(createdAt = existing?.createdAt ?: record.createdAt))
+        val sameContent = existing != null &&
+            existing.copy(createdAt = 0, updatedAt = 0, forwardedAt = 0) ==
+            record.copy(createdAt = 0, updatedAt = 0, forwardedAt = 0)
+        upsert(
+            record.copy(
+                createdAt = existing?.createdAt ?: record.createdAt,
+                forwardedAt = existing?.takeIf { sameContent }?.forwardedAt ?: 0L,
+            ),
+        )
     }
 
     @Transaction

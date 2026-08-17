@@ -40,6 +40,10 @@ data class LocalArchiveRecord(
     val eventType: String,
     val createdAt: Long,
     val updatedAt: Long,
+    /**
+     * 成功转发到存档服务器的时间。`0` 表示尚未同步；正文被覆盖后会清零以便再次提交。
+     */
+    val forwardedAt: Long = 0,
 ) {
     companion object {
         const val TABLE_NAME = "local_archive_records"

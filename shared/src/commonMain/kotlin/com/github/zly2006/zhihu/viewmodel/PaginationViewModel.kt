@@ -35,13 +35,18 @@ import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_AUTO_FORWARD_LIMIT
+import com.github.zly2006.zhihu.data.LocalArchiveForwardGate
 import com.github.zly2006.zhihu.data.OnlineHistoryDeletePair
 import com.github.zly2006.zhihu.data.ZhihuJson.decodeJson
 import com.github.zly2006.zhihu.data.ZhihuPaging
 import com.github.zly2006.zhihu.data.executeZhihuAuthenticatedRequest
 import com.github.zly2006.zhihu.data.fetchZhihuAuthenticatedJson
 import com.github.zly2006.zhihu.data.fetchZhihuContentDetail
+import com.github.zly2006.zhihu.data.forwardPendingLocalArchives
 import com.github.zly2006.zhihu.data.getOrFetchContentDetail
+import com.github.zly2006.zhihu.data.isArchiveServerUnavailable
+import com.github.zly2006.zhihu.data.sharedLocalArchiveForwardGate
 import com.github.zly2006.zhihu.data.toLocalArchiveRecord
 import com.github.zly2006.zhihu.navigation.AnswerNavigator
 import com.github.zly2006.zhihu.navigation.Article
@@ -81,6 +86,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.serializer
 import kotlin.reflect.KType
+import kotlin.time.Clock
 
 abstract class PaginationViewModel<T : Any>(
     val dataType: KType,
@@ -463,11 +469,19 @@ interface ArchiveEnvironment {
         token: String,
     ): ArchiveClient? = null
 
+    fun archiveForwardClient(): ArchiveClient? = null
+
     fun localArchiveDao(): LocalArchiveDao? = null
 
     fun localArchiveSaveStrategy(): ArchiveSaveStrategy = ArchiveSaveStrategy.Default
 
     fun archiveServerSaveStrategy(): ArchiveSaveStrategy = ArchiveSaveStrategy.Default
+
+    fun localArchiveForwardEnabled(): Boolean = false
+
+    fun localArchiveForwardDeleteAfterSync(): Boolean = false
+
+    fun localArchiveForwardGate(): LocalArchiveForwardGate = sharedLocalArchiveForwardGate
 }
 
 suspend fun persistArchive(
@@ -475,21 +489,65 @@ suspend fun persistArchive(
     item: ArchiveItem,
     trigger: ArchiveSaveTrigger = ArchiveSaveTrigger.Read,
 ) {
+    val now = Clock.System.now().toEpochMilliseconds()
+    val dao = environment.localArchiveDao()
+    var localSaved = false
     if (environment.localArchiveSaveStrategy().shouldPersist(trigger)) {
-        environment.localArchiveDao()?.let { dao ->
+        dao?.let { localDao ->
             runCatching {
-                dao.upsertPreservingCreatedAt(item.toLocalArchiveRecord())
+                localDao.upsertPreservingCreatedAt(item.toLocalArchiveRecord(now))
+                localSaved = true
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 Log.w("Archive", "写入本地存档失败", error)
             }
         }
     }
+    var serverSaved = false
     if (environment.archiveServerSaveStrategy().shouldPersist(trigger)) {
         environment.archiveClient()?.let { client ->
-            runCatching { client.saveItem(item) }.onFailure { error ->
+            val gate = environment.localArchiveForwardGate()
+            if (gate.canAttempt(now, force = false)) {
+                runCatching { client.saveItem(item) }
+                    .onSuccess {
+                        serverSaved = true
+                    }.onFailure { error ->
+                        if (error is CancellationException) throw error
+                        if (isArchiveServerUnavailable(error)) {
+                            gate.markUnavailable(now, error.message ?: "提交失败")
+                        }
+                        Log.w("Archive", "提交存档失败", error)
+                    }
+            }
+        }
+    }
+    if (serverSaved && dao != null) {
+        runCatching {
+            if (environment.localArchiveForwardEnabled() && environment.localArchiveForwardDeleteAfterSync()) {
+                dao.deleteByNormalizedUrl(item.normalizedUrl)
+            } else {
+                dao.markForwarded(item.normalizedUrl, now)
+            }
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            Log.w("Archive", "更新本地存档转发状态失败", error)
+        }
+    } else if (localSaved && dao != null && environment.localArchiveForwardEnabled()) {
+        val forwardClient = environment.archiveForwardClient()
+        if (forwardClient != null) {
+            runCatching {
+                forwardPendingLocalArchives(
+                    dao = dao,
+                    client = forwardClient,
+                    deleteAfterSync = environment.localArchiveForwardDeleteAfterSync(),
+                    gate = environment.localArchiveForwardGate(),
+                    force = false,
+                    now = now,
+                    limit = LOCAL_ARCHIVE_AUTO_FORWARD_LIMIT,
+                )
+            }.onFailure { error ->
                 if (error is CancellationException) throw error
-                Log.w("Archive", "提交存档失败", error)
+                Log.w("Archive", "转发本地存档失败", error)
             }
         }
     }

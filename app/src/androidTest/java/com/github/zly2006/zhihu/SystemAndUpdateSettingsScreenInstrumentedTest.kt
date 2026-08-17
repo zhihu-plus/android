@@ -39,6 +39,8 @@ import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.performVerticalSwipeCycle
@@ -48,6 +50,9 @@ import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_ARCHIVE_URL_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_DELETE_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG
+import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SYSTEM_SETTINGS_REMINDER_INTERVAL_TAG
 import com.github.zly2006.zhihu.ui.subscreens.SystemAndUpdateSettingsScreen
@@ -282,6 +287,38 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
 
         assertEquals("voted", preferences.getString(LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY, ""))
         assertEquals("collected", preferences.getString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, ""))
+    }
+
+    @Test
+    fun localArchiveForwardSettingsPersistWithoutEnablingRealtimeServer() {
+        setUpScreen()
+        val scrollContainer = scrollContainer()
+
+        scrollContainer.performScrollToNode(hasText("启用本地存档"))
+        clickSettingRow("启用本地存档")
+        waitUntilBooleanPreference(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasText("存档服务器地址"))
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_URL_TAG).performTextInput("http://192.168.0.10:32100")
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_ARCHIVE_TOKEN_TAG).performTextInput("local-dev-token")
+        waitUntil(timeoutMillis = 5_000) {
+            preferences.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, "") == "http://192.168.0.10:32100" &&
+                preferences.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "") == "local-dev-token"
+        }
+
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_TAG))
+        composeRule.onNodeWithText("转发保存到服务器").assertIsDisplayed()
+        clickSettingRow("转发保存到服务器")
+        waitUntilBooleanPreference(LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_DELETE_TAG))
+        composeRule.onNodeWithText("转发成功后删除本地记录").assertIsDisplayed()
+        clickSettingRow("转发成功后删除本地记录")
+        waitUntilBooleanPreference(LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, expected = true)
+
+        scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG))
+        composeRule.onNodeWithText("立即转发").assertIsDisplayed()
+        assertFalse(preferences.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
     }
 
     private fun setUpScreen() = composeRule.setScreenContent {

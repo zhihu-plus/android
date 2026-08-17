@@ -20,22 +20,44 @@ package com.github.zly2006.zhihu.data
 import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.util.extractImageUrl
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 const val LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY = "enableLocalArchive"
 const val LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY = "localArchiveSaveStrategy"
+const val LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY = "enableLocalArchiveForward"
+const val LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY = "localArchiveForwardDeleteAfterSync"
 const val ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY = "enableArchiveServer"
 const val ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY = "archiveServerSaveStrategy"
 const val ARCHIVE_SERVER_URL_PREFERENCE_KEY = "archiveServerUrl"
 const val ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY = "archiveServerToken"
+
+const val ARCHIVE_SERVER_CONNECT_TIMEOUT_MS = 3_000L
+const val ARCHIVE_SERVER_REQUEST_TIMEOUT_MS = 5_000L
+
+fun HttpClientConfig<*>.installArchiveClientConfig(json: Json) {
+    install(ContentNegotiation) {
+        json(json)
+    }
+    // 存档服务器常在局域网，不可达时必须快速失败并进入冷却，避免阅读路径被长时间挂起。
+    install(HttpTimeout) {
+        connectTimeoutMillis = ARCHIVE_SERVER_CONNECT_TIMEOUT_MS
+        requestTimeoutMillis = ARCHIVE_SERVER_REQUEST_TIMEOUT_MS
+        socketTimeoutMillis = ARCHIVE_SERVER_REQUEST_TIMEOUT_MS
+    }
+}
 
 enum class ArchiveSaveStrategy(
     val key: String,

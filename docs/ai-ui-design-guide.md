@@ -125,6 +125,8 @@ URL 解析集中在 `resolveContent()`。支持知乎问题、回答、文章、
 | `githubToken` | GitHub Token | 更新检查 API 限速 | 不要打印或提交真实 token |
 | `enableLocalArchive` | 启用本地存档 | 按本地保存策略写入本机 SQLite | 默认关闭；不需要服务器，可与存档服务器同时开启。说明应提到避免内容被删后只剩「没有知识存在的荒原」 |
 | `localArchiveSaveStrategy` | 本地保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅本地存档开启时显示；与服务器策略互不影响 |
+| `enableLocalArchiveForward` | 转发保存到服务器 | 把本机 SQLite 尚未同步的存档提交到存档服务器 | 默认关闭；仅本地存档开启且已填写地址/令牌时可用；不要求开启实时服务器保存。局域网不可达时冷却，不重复提交 |
+| `localArchiveForwardDeleteAfterSync` | 转发成功后删除本地记录 | 成功提交后从 SQLite 删除，或只标记已同步 | 默认关闭；仅转发开启时显示 |
 | `enableArchiveServer` | 启用存档服务器 | 按服务器保存策略提交到自建存档服务 | 默认关闭；需同时配置地址和令牌 |
 | `archiveServerSaveStrategy` | 服务器保存策略 | `loaded` / `read` / `voted` / `collected` | 默认 `read`；仅存档服务器开启时显示；与本地策略互不影响 |
 | `archiveServerUrl` | 存档服务器地址 | `POST /api/zhihu/items` 的 API 根地址 | 支持 HTTP 局域网地址 |

@@ -80,7 +80,10 @@ import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ARCHIVE_SERVER_URL_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ArchiveSaveStrategy
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.forwardPendingLocalArchives
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
@@ -109,6 +112,9 @@ const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_ENABLED_TAG = "system_settings_local_arc
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_STRATEGY_TAG = "system_settings_local_archive_strategy"
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_IMPORT_TAG = "system_settings_local_archive_import"
 const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_EXPORT_TAG = "system_settings_local_archive_export"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_TAG = "system_settings_local_archive_forward"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_DELETE_TAG = "system_settings_local_archive_forward_delete"
+const val SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG = "system_settings_local_archive_forward_now"
 const val SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG = "system_settings_archive_enabled"
 const val SYSTEM_SETTINGS_ARCHIVE_SERVER_STRATEGY_TAG = "system_settings_archive_server_strategy"
 const val SYSTEM_SETTINGS_ARCHIVE_URL_TAG = "system_settings_archive_url"
@@ -416,14 +422,19 @@ fun SystemAndUpdateSettingsScreen(
                 mutableStateOf(settings.getBoolean(LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY, false))
             }
             var localArchiveCount by remember { mutableStateOf(0L) }
+            var localArchivePendingForwardCount by remember { mutableStateOf(0L) }
             var localArchiveRefreshKey by remember { mutableIntStateOf(0) }
             var localArchiveActionResult by remember { mutableStateOf("") }
+            var localArchiveForwardResult by remember { mutableStateOf("") }
             var localArchiveBusy by remember { mutableStateOf(false) }
 
             LaunchedEffect(localArchiveRefreshKey) {
-                localArchiveCount = withContext(Dispatchers.Default) {
-                    localArchiveDatabase.localArchiveDao().count()
+                val (count, pending) = withContext(Dispatchers.Default) {
+                    val dao = localArchiveDatabase.localArchiveDao()
+                    dao.count() to dao.pendingForwardCount()
                 }
+                localArchiveCount = count
+                localArchivePendingForwardCount = pending
             }
 
             var archiveEnabled by remember {
@@ -440,14 +451,35 @@ fun SystemAndUpdateSettingsScreen(
             var archiveTesting by remember { mutableStateOf(false) }
             val archiveConfigured = archiveServerUrl.trim().isNotBlank() && archiveServerToken.trim().isNotBlank()
 
+            var localArchiveForwardEnabled by remember {
+                mutableStateOf(settings.getBoolean(LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY, false))
+            }
+            var localArchiveForwardDelete by remember {
+                mutableStateOf(settings.getBoolean(LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, false))
+            }
+
             fun persistArchiveEnabled(enabled: Boolean) {
                 archiveEnabled = enabled
                 settings.putBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, enabled)
             }
 
+            fun persistLocalArchiveForwardEnabled(enabled: Boolean) {
+                localArchiveForwardEnabled = enabled
+                settings.putBoolean(LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY, enabled)
+                if (enabled) {
+                    archiveEnvironment.localArchiveForwardGate().clear()
+                }
+            }
+
             LaunchedEffect(archiveEnabled, archiveConfigured) {
                 if (archiveEnabled && !archiveConfigured) {
                     persistArchiveEnabled(false)
+                }
+            }
+
+            LaunchedEffect(localArchiveForwardEnabled, archiveConfigured) {
+                if (localArchiveForwardEnabled && !archiveConfigured) {
+                    persistLocalArchiveForwardEnabled(false)
                 }
             }
 
@@ -546,6 +578,94 @@ fun SystemAndUpdateSettingsScreen(
                     },
                 )
 
+                if (localArchiveEnabled) {
+                    SettingItemWithSwitch(
+                        modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_TAG),
+                        title = { Text("转发保存到服务器") },
+                        description = {
+                            Text(
+                                if (archiveConfigured) {
+                                    "把本机 SQLite 里尚未同步的存档提交到存档服务器。局域网离线时会暂停自动尝试，不重复提交。不需要同时开启实时服务器保存。默认关闭。"
+                                } else {
+                                    "请先填写服务器地址和令牌，再开启。开启后会把本机尚未同步的存档提交到服务器。"
+                                },
+                            )
+                        },
+                        checked = localArchiveForwardEnabled,
+                        onCheckedChange = { persistLocalArchiveForwardEnabled(it) },
+                        enabled = archiveConfigured || localArchiveForwardEnabled,
+                        settingKey = LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY,
+                        highlightedKey = highlightedSetting,
+                    )
+
+                    if (localArchiveForwardEnabled) {
+                        SettingItemWithSwitch(
+                            modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_DELETE_TAG),
+                            title = { Text("转发成功后删除本地记录") },
+                            description = {
+                                Text("关闭则只标记已同步，本机仍可导出；开启则成功提交后从 SQLite 删除。默认关闭。")
+                            },
+                            checked = localArchiveForwardDelete,
+                            onCheckedChange = {
+                                localArchiveForwardDelete = it
+                                settings.putBoolean(LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, it)
+                            },
+                            settingKey = LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY,
+                            highlightedKey = highlightedSetting,
+                        )
+
+                        SettingItem(
+                            title = { Text("立即转发") },
+                            description = {
+                                Text(
+                                    localArchiveForwardResult.ifBlank {
+                                        "待转发 $localArchivePendingForwardCount 条。服务器恢复后可点此重试，不受自动冷却限制。"
+                                    },
+                                )
+                            },
+                            settingKey = "localArchiveForwardNow",
+                            highlightedKey = highlightedSetting,
+                            endAction = {
+                                TextButton(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            localArchiveBusy = true
+                                            localArchiveForwardResult = "正在转发..."
+                                            val client = archiveEnvironment.archiveClient(
+                                                baseUrl = archiveServerUrl,
+                                                token = archiveServerToken,
+                                            )
+                                            localArchiveForwardResult = when {
+                                                client == null && archiveServerUrl.isBlank() -> "请先填写服务器地址"
+                                                client == null -> "当前平台暂不支持转发"
+                                                else -> runCatching {
+                                                    withContext(Dispatchers.Default) {
+                                                        forwardPendingLocalArchives(
+                                                            dao = localArchiveDatabase.localArchiveDao(),
+                                                            client = client,
+                                                            deleteAfterSync = localArchiveForwardDelete,
+                                                            gate = archiveEnvironment.localArchiveForwardGate(),
+                                                            force = true,
+                                                        ).message
+                                                    }
+                                                }.getOrElse { error ->
+                                                    "转发失败：${error.message ?: "未知错误"}"
+                                                }
+                                            }
+                                            localArchiveRefreshKey += 1
+                                            localArchiveBusy = false
+                                        }
+                                    },
+                                    enabled = !localArchiveBusy && archiveConfigured,
+                                    modifier = Modifier.testTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG),
+                                ) {
+                                    Text(if (localArchiveBusy) "处理中..." else "立即转发")
+                                }
+                            },
+                        )
+                    }
+                }
+
                 SettingItemWithSwitch(
                     modifier = Modifier.testTag(SYSTEM_SETTINGS_ARCHIVE_ENABLED_TAG),
                     title = { Text("启用存档服务器") },
@@ -602,6 +722,7 @@ fun SystemAndUpdateSettingsScreen(
                                 archiveServerUrl = it
                                 settings.putString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, it.trim())
                                 archiveTestResult = ""
+                                archiveEnvironment.localArchiveForwardGate().clear()
                                 if (it.trim().isBlank() && archiveEnabled) {
                                     persistArchiveEnabled(false)
                                 }
@@ -628,6 +749,7 @@ fun SystemAndUpdateSettingsScreen(
                                 archiveServerToken = it
                                 settings.putString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, it.trim())
                                 archiveTestResult = ""
+                                archiveEnvironment.localArchiveForwardGate().clear()
                                 if (it.trim().isBlank() && archiveEnabled) {
                                     persistArchiveEnabled(false)
                                 }
@@ -672,7 +794,12 @@ fun SystemAndUpdateSettingsScreen(
                                         client == null -> "当前平台暂不支持测试连接"
                                         else -> runCatching {
                                             withContext(Dispatchers.Default) {
-                                                if (client.checkHealth()) "连接成功" else "服务器未返回正常状态"
+                                                if (client.checkHealth()) {
+                                                    archiveEnvironment.localArchiveForwardGate().clear()
+                                                    "连接成功"
+                                                } else {
+                                                    "服务器未返回正常状态"
+                                                }
                                             }
                                         }.getOrElse { error ->
                                             "连接失败：${error.message ?: "未知错误"}"
