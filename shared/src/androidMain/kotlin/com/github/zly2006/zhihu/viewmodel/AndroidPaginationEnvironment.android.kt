@@ -74,6 +74,8 @@ import com.github.zly2006.zhihu.util.buildOfflineArticleExportHtml
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.exportCollectionItemsToZip
 import com.github.zly2006.zhihu.util.saveBitmapToGallery
+import com.github.zly2006.zhihu.viewmodel.QUALITY_FILTER_MODE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.viewmodel.QualityFilterMode
 import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveDao
 import com.github.zly2006.zhihu.viewmodel.archive.getLocalArchiveDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedKeywordService
@@ -347,7 +349,9 @@ open class SharedAndroidPaginationEnvironment(
     }
 
     override fun feedDisplaySettings(): FeedDisplaySettings = FeedDisplaySettings(
-        enableQualityFilter = settingsStore.getBoolean("enableQualityFilter", true),
+        qualityFilterMode = QualityFilterMode.entries.firstOrNull {
+            it.name == settingsStore.getString(QUALITY_FILTER_MODE_PREFERENCE_KEY, QualityFilterMode.RULES.name)
+        } ?: QualityFilterMode.RULES,
         reverseBlock = settingsStore.getBoolean("reverseBlock", false),
     )
 
