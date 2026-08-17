@@ -52,7 +52,7 @@ class LocalArchiveForwardTest {
         val database = testDatabase("mark")
         val dao = database.localArchiveDao()
         dao.upsertPreservingCreatedAt(sampleRecord("1", now = 1000))
-        dao.upsertPreservingCreatedAt(sampleRecord("2", now = 2000).copy(forwardedAt = 2000))
+        dao.upsert(sampleRecord("2", now = 2000).copy(forwardedAt = 2000))
         val posts = AtomicInteger(0)
         val result = forwardPendingLocalArchives(
             dao = dao,

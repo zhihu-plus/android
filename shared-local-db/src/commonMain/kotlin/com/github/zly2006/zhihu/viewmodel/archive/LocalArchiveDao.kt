@@ -40,7 +40,7 @@ interface LocalArchiveDao {
     @Query(
         """
         SELECT * FROM ${LocalArchiveRecord.TABLE_NAME}
-        WHERE forwardedAt = 0 OR forwardedAt < updatedAt
+        WHERE forwardedAt = 0
         ORDER BY updatedAt ASC
         LIMIT :limit
         """,
@@ -50,7 +50,7 @@ interface LocalArchiveDao {
     @Query(
         """
         SELECT COUNT(*) FROM ${LocalArchiveRecord.TABLE_NAME}
-        WHERE forwardedAt = 0 OR forwardedAt < updatedAt
+        WHERE forwardedAt = 0
         """,
     )
     suspend fun pendingForwardCount(): Long

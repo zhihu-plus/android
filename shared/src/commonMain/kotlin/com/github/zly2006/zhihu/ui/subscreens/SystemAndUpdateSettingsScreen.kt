@@ -429,11 +429,12 @@ fun SystemAndUpdateSettingsScreen(
             var localArchiveBusy by remember { mutableStateOf(false) }
 
             LaunchedEffect(localArchiveRefreshKey) {
-                withContext(Dispatchers.Default) {
+                val (count, pending) = withContext(Dispatchers.Default) {
                     val dao = localArchiveDatabase.localArchiveDao()
-                    localArchiveCount = dao.count()
-                    localArchivePendingForwardCount = dao.pendingForwardCount()
+                    dao.count() to dao.pendingForwardCount()
                 }
+                localArchiveCount = count
+                localArchivePendingForwardCount = pending
             }
 
             var archiveEnabled by remember {
