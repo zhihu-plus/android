@@ -51,10 +51,13 @@ import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.HistoryStorage
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.ZhihuCookieStorage
 import com.github.zly2006.zhihu.data.ZhihuJson.json
 import com.github.zly2006.zhihu.data.createArchiveClient
+import com.github.zly2006.zhihu.data.installArchiveClientConfig
 import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.filter.ContentOpenEventSupport
@@ -147,9 +150,7 @@ open class SharedAndroidPaginationEnvironment(
     }
     private val archiveHttpClient by lazy {
         HttpClient {
-            install(ContentNegotiation) {
-                json(json)
-            }
+            installArchiveClientConfig(json)
         }
     }
 
@@ -281,6 +282,22 @@ open class SharedAndroidPaginationEnvironment(
         ArchiveSaveStrategy.fromKey(
             settingsStore.getString(ARCHIVE_SERVER_SAVE_STRATEGY_PREFERENCE_KEY, ArchiveSaveStrategy.Default.key),
         )
+
+    override fun localArchiveForwardEnabled(): Boolean =
+        settingsStore.getBoolean(LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY, false)
+
+    override fun localArchiveForwardDeleteAfterSync(): Boolean =
+        settingsStore.getBoolean(LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, false)
+
+    override fun archiveForwardClient(): ArchiveClient? {
+        if (!localArchiveForwardEnabled()) return null
+        val token = settingsStore.getString(ARCHIVE_SERVER_TOKEN_PREFERENCE_KEY, "").trim()
+        if (token.isBlank()) return null
+        return archiveClient(
+            baseUrl = settingsStore.getString(ARCHIVE_SERVER_URL_PREFERENCE_KEY, ""),
+            token = token,
+        )
+    }
 
     override fun authenticatedCookies(): Map<String, String> {
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)

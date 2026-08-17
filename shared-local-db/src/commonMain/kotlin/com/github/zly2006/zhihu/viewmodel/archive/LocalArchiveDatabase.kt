@@ -23,12 +23,15 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabase.Builder
 import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 import com.github.zly2006.zhihu.data.applyPlatformDriver
 import kotlinx.coroutines.Dispatchers
 
 @Database(
     entities = [LocalArchiveRecord::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(LocalArchiveConverters::class)
@@ -44,9 +47,21 @@ expect object LocalArchiveDatabaseConstructor : RoomDatabaseConstructor<LocalArc
 
 expect fun getLocalArchiveDatabase(): LocalArchiveDatabase
 
+private val migration1To2 = object : Migration(1, 2) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            """
+            ALTER TABLE `${LocalArchiveRecord.TABLE_NAME}`
+            ADD COLUMN `forwardedAt` INTEGER NOT NULL DEFAULT 0
+            """.trimIndent(),
+        )
+    }
+}
+
 fun buildLocalArchiveDatabase(
     builder: Builder<LocalArchiveDatabase>,
 ): LocalArchiveDatabase = builder
+    .addMigrations(migration1To2)
     .applyPlatformDriver()
     .setQueryCoroutineContext(Dispatchers.Default)
     .build()

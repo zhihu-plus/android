@@ -41,4 +41,15 @@ private val emptyLocalArchiveDao = object : LocalArchiveDao {
     override suspend fun getAll(): List<LocalArchiveRecord> = emptyList()
 
     override suspend fun count(): Long = 0L
+
+    override suspend fun getPendingForward(limit: Int): List<LocalArchiveRecord> = emptyList()
+
+    override suspend fun pendingForwardCount(): Long = 0L
+
+    override suspend fun markForwarded(
+        normalizedUrl: String,
+        forwardedAt: Long,
+    ) = Unit
+
+    override suspend fun deleteByNormalizedUrl(normalizedUrl: String) = Unit
 }
