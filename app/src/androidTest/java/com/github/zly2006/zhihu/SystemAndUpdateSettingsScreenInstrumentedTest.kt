@@ -317,7 +317,7 @@ class SystemAndUpdateSettingsScreenInstrumentedTest {
         waitUntilBooleanPreference(LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY, expected = true)
 
         scrollContainer.performScrollToNode(hasTestTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG))
-        composeRule.onNodeWithText("立即转发").assertIsDisplayed()
+        composeRule.onNodeWithTag(SYSTEM_SETTINGS_LOCAL_ARCHIVE_FORWARD_NOW_TAG).assertIsDisplayed()
         assertFalse(preferences.getBoolean(ARCHIVE_SERVER_ENABLED_PREFERENCE_KEY, false))
     }
 
