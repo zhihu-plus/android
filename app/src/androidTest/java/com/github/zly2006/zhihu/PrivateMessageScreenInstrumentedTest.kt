@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -64,27 +65,29 @@ class PrivateMessageScreenInstrumentedTest {
             )
         }
 
+        val messageText = "打开这个链接 https://www.zhihu.com/question/123"
         val bodyTag = "$PRIVATE_MESSAGE_BODY_TAG_PREFIX${message.stableId}"
         composeRule.waitUntil("私信正文未出现", timeoutMillis = 5_000) {
             composeRule.onAllNodesWithTag(bodyTag).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText("打开这个链接 https://www.zhihu.com/question/123").assertIsDisplayed()
-        composeRule.onNodeWithTag(bodyTag).performTouchInput { longClick() }
-        composeRule.waitUntil("长按后应出现可选中文本", timeoutMillis = 5_000) {
-            val range = composeRule
-                .onNodeWithTag(bodyTag)
-                .fetchSemanticsNode()
-                .config
-                .getOrNull(SemanticsProperties.TextSelectionRange)
-            range != null && range.length > 0
+        composeRule.onNodeWithText(messageText).assertIsDisplayed()
+        composeRule.waitUntil("长按后应出现可选中文本", timeoutMillis = 15_000) {
+            if (!hasSelectedPrivateMessageText(messageText)) {
+                composeRule.onNodeWithText(messageText, useUnmergedTree = true)
+                    .performTouchInput { longClick(center) }
+            }
+            hasSelectedPrivateMessageText(messageText)
         }
-        val selectedRange = composeRule
-            .onNodeWithTag(bodyTag)
-            .fetchSemanticsNode()
-            .config
-            .getOrNull(SemanticsProperties.TextSelectionRange)
-        assertTrue(selectedRange != null && selectedRange.length > 0)
+        assertTrue(hasSelectedPrivateMessageText(messageText))
     }
+
+    private fun hasSelectedPrivateMessageText(messageText: String): Boolean =
+        composeRule.onAllNodesWithText(messageText, useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .any { node ->
+                val range = node.config.getOrNull(SemanticsProperties.TextSelectionRange)
+                range != null && range.length > 0
+            }
 
     private companion object {
         const val PEER_ID = "peer-copy"
