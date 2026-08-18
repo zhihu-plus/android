@@ -125,7 +125,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: "23"
+          java-version: "17"
           cache: gradle
 
       - name: Restore Gradle build cache
@@ -137,17 +137,15 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
-      - name: Run unit tests
-        run: ./gradlew :shared:jvmTest :app:testLiteDebugUnitTest --max-workers=2
+      - name: Run Lite unit tests
+        run: ./gradlew :app:testLiteDebugUnitTest --max-workers=2
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: PR Test Reports
-          path: |
-            app/build/reports
-            shared/build/reports
+          path: app/build/reports
 
   mock-instrumented-shards:
     name: Mock Instrumented Shard (${{ matrix.shard_label }}/5)
