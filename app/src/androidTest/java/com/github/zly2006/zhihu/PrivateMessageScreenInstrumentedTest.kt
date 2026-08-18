@@ -6,7 +6,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -90,7 +89,8 @@ class PrivateMessageScreenInstrumentedTest {
                     range != null && range.length > 0
                 },
                 useUnmergedTree = true,
-            ).fetchSemanticsNodes()
+            )
+            .fetchSemanticsNodes()
             .isNotEmpty()
 
     private companion object {
