@@ -39,6 +39,8 @@ import com.github.zly2006.zhihu.data.VoteUpState
 import com.github.zly2006.zhihu.data.ZhihuJson
 import com.github.zly2006.zhihu.data.createArchiveItem
 import com.github.zly2006.zhihu.data.decodeZhihuCommentData
+import com.github.zly2006.zhihu.data.loadLocalArchiveForAnswer
+import com.github.zly2006.zhihu.data.loadLocalArchiveForArticle
 import com.github.zly2006.zhihu.data.officialBadge
 import com.github.zly2006.zhihu.markdown.htmlToMdAst
 import com.github.zly2006.zhihu.markdown.toMarkdown
@@ -64,6 +66,7 @@ import com.github.zly2006.zhihu.util.prepareArticleExportComment
 import com.github.zly2006.zhihu.util.raiseForStatus
 import com.github.zly2006.zhihu.util.serializeZhidaSummaryRequest
 import com.github.zly2006.zhihu.util.twoDigitString
+import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveRecord
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.accept
@@ -116,6 +119,7 @@ class ArticleViewModel(
     val canFollowAuthor: Boolean
         get() = authorUrlToken.isNotBlank() && !authorIsSelf
     var content by mutableStateOf("")
+    var contentFromLocalArchive by mutableStateOf(false)
     var attachment by mutableStateOf<JsonElement?>(null)
     var voteUpCount by mutableIntStateOf(0)
     var commentCount by mutableIntStateOf(0)
@@ -263,6 +267,7 @@ class ArticleViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 try {
+                    contentFromLocalArchive = false
                     if (article.type == ArticleType.Answer) {
                         val sharedData = environment.articleAnswerSwitchState()
                         val answer = environment.fetchContentDetail(article) as? DataHolder.Answer
@@ -343,9 +348,18 @@ class ArticleViewModel(
                                 }
                             }
                         } else {
-                            content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
-                            endorsements = emptyList()
-                            Log.e("ArticleViewModel", "Answer not found")
+                            val localArchive = loadLocalArchiveForAnswer(
+                                answerId = article.id,
+                                questionId = questionId.takeIf { it > 0L },
+                            )
+                            if (localArchive != null) {
+                                applyLocalArchiveRecord(localArchive)
+                                Log.i("ArticleViewModel", "Loaded deleted answer ${article.id} from local archive")
+                            } else {
+                                content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
+                                endorsements = emptyList()
+                                Log.e("ArticleViewModel", "Answer not found")
+                            }
                         }
                     } else if (article.type == ArticleType.Article) {
                         val article = environment.fetchContentDetail(article) as? DataHolder.Article
@@ -391,8 +405,17 @@ class ArticleViewModel(
                             environment.recordOpenEvent(this@ArticleViewModel.article, null)
                             archiveCurrentContent(environment, ArchiveSaveTrigger.Read)
                         } else {
-                            content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
-                            Log.e("ArticleViewModel", "Article not found")
+                            val localArchive = loadLocalArchiveForArticle(this@ArticleViewModel.article.id)
+                            if (localArchive != null) {
+                                applyLocalArchiveRecord(localArchive)
+                                Log.i(
+                                    "ArticleViewModel",
+                                    "Loaded deleted article ${this@ArticleViewModel.article.id} from local archive",
+                                )
+                            } else {
+                                content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
+                                Log.e("ArticleViewModel", "Article not found")
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -722,6 +745,37 @@ class ArticleViewModel(
                 aigcVoteLoading = false
             }
         }
+    }
+
+    private fun applyLocalArchiveRecord(record: LocalArchiveRecord) {
+        contentFromLocalArchive = true
+        exportSourceContent = null
+        title = record.title
+        content = record.contentHtml
+        authorName = record.authorName
+        authorBio = ""
+        authorAvatarSrc = ""
+        authorId = ""
+        authorUrlToken = ""
+        authorBadge = null
+        authorIsFollowing = false
+        authorIsSelf = false
+        attachment = null
+        voteUpCount = 0
+        votersTotal = 0
+        commentCount = 0
+        voteUpState = VoteUpState.Neutral
+        answerNextIds = emptyList()
+        endorsements = emptyList()
+        topics = emptyList()
+        ipInfo = null
+        record.questionId.toLongOrNull()?.let { resolvedQuestionId ->
+            if (resolvedQuestionId > 0L) {
+                questionId = resolvedQuestionId
+            }
+        }
+        createdAt = record.createdAt
+        updatedAt = record.updatedAt
     }
 
     private fun archiveCurrentContent(

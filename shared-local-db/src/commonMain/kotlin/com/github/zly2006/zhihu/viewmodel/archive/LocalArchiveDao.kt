@@ -31,6 +31,26 @@ interface LocalArchiveDao {
     @Query("SELECT * FROM ${LocalArchiveRecord.TABLE_NAME} WHERE normalizedUrl = :normalizedUrl")
     suspend fun getByNormalizedUrl(normalizedUrl: String): LocalArchiveRecord?
 
+    @Query(
+        """
+        SELECT * FROM ${LocalArchiveRecord.TABLE_NAME}
+        WHERE answerId = :answerId AND type = 'answer'
+        ORDER BY updatedAt DESC
+        LIMIT 1
+        """,
+    )
+    suspend fun getByAnswerId(answerId: String): LocalArchiveRecord?
+
+    @Query(
+        """
+        SELECT * FROM ${LocalArchiveRecord.TABLE_NAME}
+        WHERE articleId = :articleId AND type = 'article'
+        ORDER BY updatedAt DESC
+        LIMIT 1
+        """,
+    )
+    suspend fun getByArticleId(articleId: String): LocalArchiveRecord?
+
     @Query("SELECT * FROM ${LocalArchiveRecord.TABLE_NAME} ORDER BY updatedAt DESC")
     suspend fun getAll(): List<LocalArchiveRecord>
 

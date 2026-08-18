@@ -105,6 +105,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil3.compose.AsyncImage
 import com.github.zly2006.zhihu.data.DataHolder
+import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SOURCE_LABEL
 import com.github.zly2006.zhihu.data.VoteUpState
 import com.github.zly2006.zhihu.markdown.RenderMarkdown
 import com.github.zly2006.zhihu.navigation.Article
@@ -955,6 +956,14 @@ fun ArticleScreen(
                         }
 
                         if (viewModel.content.isNotEmpty() || viewModel.attachment != null) {
+                            if (viewModel.contentFromLocalArchive) {
+                                Text(
+                                    text = LOCAL_ARCHIVE_SOURCE_LABEL,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                )
+                            }
                             if (article.type == ArticleType.Article && viewModel.topics.isNotEmpty()) {
                                 FlowRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
