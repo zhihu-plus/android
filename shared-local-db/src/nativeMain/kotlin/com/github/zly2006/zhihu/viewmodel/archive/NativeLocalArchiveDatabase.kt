@@ -38,6 +38,10 @@ private val emptyLocalArchiveDao = object : LocalArchiveDao {
 
     override suspend fun getByNormalizedUrl(normalizedUrl: String): LocalArchiveRecord? = null
 
+    override suspend fun getByAnswerId(answerId: String): LocalArchiveRecord? = null
+
+    override suspend fun getByArticleId(articleId: String): LocalArchiveRecord? = null
+
     override suspend fun getAll(): List<LocalArchiveRecord> = emptyList()
 
     override suspend fun count(): Long = 0L
