@@ -394,8 +394,7 @@ fun ArticleScreen(
                 .fillMaxSize()
                 .semantics {
                     paneTitle = if (article.type == ArticleType.Answer) "回答" else "文章"
-                }
-                .then(if (!isImmersiveMode) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier),
+                }.then(if (!isImmersiveMode) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier),
             topBar = if (isImmersiveMode) {
                 {}
             } else {
@@ -453,8 +452,7 @@ fun ArticleScreen(
                                             } else {
                                                 it
                                             }
-                                        }
-                                        .semantics {
+                                        }.semantics {
                                             heading()
                                             customActions = buildList {
                                                 if (article.type == ArticleType.Answer) {
