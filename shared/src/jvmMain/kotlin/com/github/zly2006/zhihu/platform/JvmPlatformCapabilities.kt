@@ -230,3 +230,6 @@ actual fun PlatformPredictiveBackHandler(
 
 @Composable
 actual fun rememberIsLiteVariant(): Boolean = false
+
+@Composable
+actual fun rememberTouchExplorationEnabled(): Boolean = false

@@ -103,4 +103,7 @@ actual fun rememberAppPrivateDirectory(): Path = remember {
 actual fun rememberIsLiteVariant(): Boolean = false // TODO: iOS 变体判断
 
 @Composable
+actual fun rememberTouchExplorationEnabled(): Boolean = false // TODO: iOS VoiceOver
+
+@Composable
 actual fun rememberUserMessageSink(): UserMessageSink = remember { UserMessageSink(showShortMessage = {}) } // TODO: iOS 用户消息提示

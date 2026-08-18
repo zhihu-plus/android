@@ -22,12 +22,17 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
@@ -196,6 +201,28 @@ actual fun rememberUserMessageSink(): UserMessageSink {
 actual fun rememberIsLiteVariant(): Boolean {
     val context = LocalContext.current
     return remember(context) { isAndroidLiteVariantPackageName(context.packageName) }
+}
+
+@Composable
+actual fun rememberTouchExplorationEnabled(): Boolean {
+    val context = LocalContext.current.applicationContext
+    val accessibilityManager = remember(context) {
+        context.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+    }
+    var enabled by remember(accessibilityManager) {
+        mutableStateOf(accessibilityManager.isTouchExplorationEnabled)
+    }
+    DisposableEffect(accessibilityManager) {
+        val listener = AccessibilityManager.TouchExplorationStateChangeListener { exploring ->
+            enabled = exploring
+        }
+        accessibilityManager.addTouchExplorationStateChangeListener(listener)
+        enabled = accessibilityManager.isTouchExplorationEnabled
+        onDispose {
+            accessibilityManager.removeTouchExplorationStateChangeListener(listener)
+        }
+    }
+    return enabled
 }
 
 internal fun isAndroidLiteVariantPackageName(packageName: String): Boolean = packageName.endsWith(".lite")

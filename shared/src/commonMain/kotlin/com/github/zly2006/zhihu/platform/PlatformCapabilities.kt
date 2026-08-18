@@ -110,3 +110,12 @@ expect fun PlatformPredictiveBackHandler(
 
 @Composable
 expect fun rememberIsLiteVariant(): Boolean
+
+/**
+ * 当前是否开启触控探索（Android TalkBack / iOS VoiceOver）。
+ *
+ * 读屏开启时，滑动手势和自动隐藏控件会抢走焦点或把操作栏移出语义树，
+ * 主路径应改为保留栏位、关闭回答切换手势，并把切换回答做成无障碍自定义动作。
+ */
+@Composable
+expect fun rememberTouchExplorationEnabled(): Boolean
