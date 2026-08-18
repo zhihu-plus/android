@@ -128,6 +128,30 @@ abstract class PaginationViewModel<T : Any>(
         allData.addAll(data) // 保存未flatten的数据
     }
 
+    protected open fun decodePage(
+        environment: PaginationEnvironment,
+        rawData: JsonArray,
+    ): List<T> = rawData.mapNotNull {
+        if ("type" in it.jsonObject &&
+            it.jsonObject["type"]?.jsonPrimitive?.content in listOf(
+                "invited_answer",
+                "tab_list",
+                "feed_item_index_group",
+            )
+        ) {
+            return@mapNotNull null
+        }
+        try {
+            @Suppress("UNCHECKED_CAST")
+            decodeJson(serializer(dataType) as KSerializer<T>, it)
+        } catch (e: Exception) {
+            if (shouldLogDecodeFailures) {
+                environment.logDecodeFailure(this::class.simpleName, it, e)
+            }
+            null
+        }
+    }
+
     protected open suspend fun fetchFeeds(environment: PaginationEnvironment) {
         try {
             val url = resolvePageUrl()
@@ -138,36 +162,14 @@ abstract class PaginationViewModel<T : Any>(
 
             val jsonArray = json["data"] as? JsonArray
                 ?: throw RuntimeException("您可能已被风控，请重新登录。", Exception("cause: no $.data"))
-            processResponse(
-                environment,
-                jsonArray.mapNotNull {
-                    if ("type" in it.jsonObject &&
-                        it.jsonObject["type"]?.jsonPrimitive?.content in listOf(
-                            "invited_answer", // invalid
-                            "tab_list", // invalid
-                            "feed_item_index_group", // todo
-                        )
-                    ) {
-                        return@mapNotNull null
-                    }
-                    try {
-                        @Suppress("UNCHECKED_CAST")
-                        decodeJson(serializer(dataType) as KSerializer<T>, it)
-                    } catch (e: Exception) {
-                        if (shouldLogDecodeFailures) {
-                            environment.logDecodeFailure(this::class.simpleName, it, e)
-                        }
-                        null
-                    }
-                },
-                jsonArray,
-            )
+            processResponse(environment, decodePage(environment, jsonArray), jsonArray)
             if ("paging" in json) {
                 lastPaging = decodeJson(json["paging"]!!)
             }
         } catch (e: Exception) {
             if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             environment.handleFetchFailure(this::class.simpleName, e)
+            errorHandle(e)
         } finally {
             isLoading = false
         }
@@ -667,9 +669,17 @@ interface PaginationEnvironment :
     ArticleExportContentEnvironment
 
 data class FeedDisplaySettings(
-    val enableQualityFilter: Boolean = true,
+    val qualityFilterMode: QualityFilterMode = QualityFilterMode.RULES,
     val reverseBlock: Boolean = false,
 )
+
+enum class QualityFilterMode {
+    OFF,
+    RULES,
+    HIDE,
+}
+
+const val QUALITY_FILTER_MODE_PREFERENCE_KEY = "qualityFilterMode"
 
 data class HomeFeedFilterResult(
     val foregroundItems: List<FeedDisplayItem>,
