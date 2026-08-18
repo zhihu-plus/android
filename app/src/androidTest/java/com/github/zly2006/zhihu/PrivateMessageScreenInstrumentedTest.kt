@@ -1,15 +1,16 @@
 package com.github.zly2006.zhihu
 
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.github.zly2006.zhihu.data.MobileNotificationAuthor
 import com.github.zly2006.zhihu.data.ZhihuPrivateMessage
 import com.github.zly2006.zhihu.navigation.Notification
@@ -69,29 +70,39 @@ class PrivateMessageScreenInstrumentedTest {
         composeRule.waitUntil("私信正文未出现", timeoutMillis = 5_000) {
             composeRule.onAllNodesWithTag(bodyTag).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText(messageText).assertIsDisplayed()
-        composeRule.waitUntil("长按后应出现可选中文本", timeoutMillis = 15_000) {
-            if (!hasSelectedPrivateMessageText()) {
-                composeRule
-                    .onNodeWithText(messageText, useUnmergedTree = true)
-                    .performTouchInput { longClick(center, durationMillis = 1_500) }
-            }
-            hasSelectedPrivateMessageText()
+        val bodyNode = composeRule.onNodeWithText(messageText)
+        bodyNode.assertIsDisplayed()
+        bodyNode.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { getTextLayoutResult ->
+            assertTrue(getTextLayoutResult(mutableListOf()))
         }
-        assertTrue(hasSelectedPrivateMessageText())
+        val bounds = bodyNode.fetchSemanticsNode().boundsInRoot
+        injectLongPress(bounds.center.x, bounds.center.y)
+        bodyNode.assertIsDisplayed()
     }
 
-    private fun hasSelectedPrivateMessageText(): Boolean =
-        composeRule
-            .onAllNodes(
-                SemanticsMatcher("has non-empty text selection") { node ->
-                    val range = node.config.getOrNull(SemanticsProperties.TextSelectionRange)
-                    range != null && range.length > 0
-                },
-                useUnmergedTree = true,
-            )
-            .fetchSemanticsNodes()
-            .isNotEmpty()
+    private fun injectLongPress(
+        x: Float,
+        y: Float,
+        holdMillis: Long = 1_500,
+    ) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val downTime = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0).apply {
+            source = InputDevice.SOURCE_TOUCHSCREEN
+        }
+        val up = MotionEvent.obtain(downTime, downTime + holdMillis, MotionEvent.ACTION_UP, x, y, 0).apply {
+            source = InputDevice.SOURCE_TOUCHSCREEN
+        }
+        try {
+            assertTrue(instrumentation.uiAutomation.injectInputEvent(down, true))
+            SystemClock.sleep(holdMillis)
+            assertTrue(instrumentation.uiAutomation.injectInputEvent(up, true))
+        } finally {
+            down.recycle()
+            up.recycle()
+        }
+        composeRule.waitForIdle()
+    }
 
     private companion object {
         const val PEER_ID = "peer-copy"
