@@ -98,6 +98,14 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -114,6 +122,7 @@ import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.Topic
 import com.github.zly2006.zhihu.platform.PlatformBackHandler
+import com.github.zly2006.zhihu.platform.rememberTouchExplorationEnabled
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
 import com.github.zly2006.zhihu.ui.article.AigcFlagSheet
@@ -166,7 +175,7 @@ const val ARTICLE_AUTHOR_FOLLOW_TAG = "article_author_follow"
  * 页面负责加载知乎回答或专栏文章，展示标题、作者、正文、附件视频、评论入口、分享/复制/朗读/浏览器打开等底部操作，
  * 正文主路径使用 Compose Markdown 渲染。回答页还承载同题回答切换手势和对应转场状态，因此改动时要同时关注
  * `answerSwitchMode`、`buttonSkipAnswer`、`autoHideArticleBottomBar`、`titleAutoHide`、`answerDoubleTapAction` 和
- * `ARTICLE_USE_WEBVIEW_PREFERENCE_KEY`。
+ * `ARTICLE_USE_WEBVIEW_PREFERENCE_KEY`。读屏开启时会关闭回答切换手势、保留顶栏底栏，并把切换回答放到标题的无障碍自定义动作里。
  */
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -189,6 +198,8 @@ fun ArticleScreen(
 
     val scrollState = rememberScrollState()
     val articleSettings = rememberArticleScreenSettingsState()
+    val touchExplorationEnabled = rememberTouchExplorationEnabled()
+    val answerSwitchMode = if (touchExplorationEnabled) "off" else articleSettings.answerSwitchMode
     val userMessages = rememberUserMessageSink()
     val density = LocalDensity.current
     val readingPlayerOverlayPaddingPx = with(density) { readingPlayerOverlayPadding.roundToPx() }
@@ -212,11 +223,11 @@ fun ArticleScreen(
     var showVoters by rememberSaveable(article.type, article.id) { mutableStateOf(false) }
     val topBarState = rememberArticleTopBarState(
         scrollState = scrollState,
-        autoHide = articleSettings.isTitleAutoHide,
+        autoHide = articleSettings.isTitleAutoHide && !touchExplorationEnabled,
     )
     val bottomBarState = rememberArticleBottomBarState(
         scrollState = scrollState,
-        autoHide = articleSettings.autoHideArticleBottomBar,
+        autoHide = articleSettings.autoHideArticleBottomBar && !touchExplorationEnabled,
         scrollDeltaThreshold = with(density) { ScrollThresholdDp.toPx() },
         showSlot = backStackEntry?.hasRoute(Article::class) == true || articleHost == null,
         navigationBarHeightPx = density.run {
@@ -235,17 +246,27 @@ fun ArticleScreen(
     var isImmersiveMode by remember(sharedData) {
         mutableStateOf(sharedData?.isImmersiveMode ?: false)
     }
+    LaunchedEffect(touchExplorationEnabled) {
+        if (touchExplorationEnabled) {
+            isImmersiveMode = false
+        }
+    }
+
+    fun toggleImmersiveMode() {
+        if (touchExplorationEnabled) return
+        isImmersiveMode = !isImmersiveMode
+    }
     val answerNavigationState = rememberArticleAnswerNavigationState(
         switchState = sharedData,
         viewModel = viewModel,
         navigator = navigator,
         navController = articleHost?.articleNavController,
-        answerSwitchMode = articleSettings.answerSwitchMode,
+        answerSwitchMode = answerSwitchMode,
         readingQueueSourceId = article.readingQueueSourceId,
     )
     val hapticFeedback = LocalHapticFeedback.current
     val readingPlayerOverlayOwner = remember(article.type, article.id) { Any() }
-    val usesVerticalAnswerSwitch = article.type == ArticleType.Answer && articleSettings.answerSwitchMode == "vertical"
+    val usesVerticalAnswerSwitch = article.type == ArticleType.Answer && answerSwitchMode == "vertical"
     DisposableEffect(readingPlayerOverlayOffsetState, readingPlayerOverlayOwner, usesVerticalAnswerSwitch) {
         if (usesVerticalAnswerSwitch) {
             readingPlayerOverlayOffsetState?.activate(readingPlayerOverlayOwner)
@@ -292,7 +313,7 @@ fun ArticleScreen(
                 showComments = true
             }
             AnswerDoubleTapAction.ToggleImmersive -> {
-                isImmersiveMode = !isImmersiveMode
+                toggleImmersiveMode()
             }
         }
     }
@@ -371,6 +392,9 @@ fun ArticleScreen(
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
+                .semantics {
+                    paneTitle = if (article.type == ArticleType.Answer) "回答" else "文章"
+                }
                 .then(if (!isImmersiveMode) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier),
             topBar = if (isImmersiveMode) {
                 {}
@@ -416,17 +440,41 @@ fun ArticleScreen(
                                 }
                             },
                             title = { expanded ->
+                                val nav = answerNavigationState.answerNavigator
                                 Text(
                                     text = viewModel.title,
                                     modifier = Modifier
                                         .padding(if (expanded) PaddingValues(end = 16.dp) else PaddingValues())
                                         .let {
                                             if (article.type == ArticleType.Answer) {
-                                                it.clickable {
+                                                it.clickable(onClickLabel = "打开问题") {
                                                     navigator.onNavigate(Question(viewModel.questionId, viewModel.title))
                                                 }
                                             } else {
                                                 it
+                                            }
+                                        }
+                                        .semantics {
+                                            heading()
+                                            customActions = buildList {
+                                                if (article.type == ArticleType.Answer) {
+                                                    if (nav?.previousAnswer != null) {
+                                                        add(
+                                                            CustomAccessibilityAction("上一个回答") {
+                                                                answerNavigationState.navigateToPrevious()
+                                                                true
+                                                            },
+                                                        )
+                                                    }
+                                                    if (nav?.nextAnswer != null) {
+                                                        add(
+                                                            CustomAccessibilityAction("下一个回答") {
+                                                                answerNavigationState.navigateToNext()
+                                                                true
+                                                            },
+                                                        )
+                                                    }
+                                                }
                                             }
                                         },
                                     maxLines = if (expanded) Int.MAX_VALUE else 1,
@@ -445,7 +493,7 @@ fun ArticleScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .clickable {
+                                            .clickable(onClickLabel = "打开个人主页") {
                                                 navigator.onNavigate(
                                                     com.github.zly2006.zhihu.navigation.Person(
                                                         id = viewModel.authorId,
@@ -458,7 +506,7 @@ fun ArticleScreen(
                                         if (viewModel.authorAvatarSrc.isNotEmpty()) {
                                             AsyncImage(
                                                 model = viewModel.authorAvatarSrc,
-                                                contentDescription = "作者头像",
+                                                contentDescription = null,
                                                 modifier = Modifier
                                                     .size(if (expanded) 40.dp else 20.dp)
                                                     .clip(CircleShape),
@@ -624,8 +672,11 @@ fun ArticleScreen(
                                         onClick = { showComments = true },
                                         contentPadding = PaddingValues(start = 8.dp, end = 12.dp),
                                         colors = voteUpNeutralButtonColors(),
+                                        modifier = Modifier.semantics {
+                                            contentDescription = "${viewModel.commentCount} 条评论"
+                                        },
                                     ) {
-                                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = "评论")
+                                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = null)
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(text = "${viewModel.commentCount}")
                                     }
@@ -796,8 +847,11 @@ fun ArticleScreen(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainer,
                                             contentColor = MaterialTheme.colorScheme.onSurface,
                                         ),
+                                        modifier = Modifier.semantics {
+                                            contentDescription = "${viewModel.commentCount} 条评论"
+                                        },
                                     ) {
-                                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = "评论")
+                                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = null)
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(text = "${viewModel.commentCount}", style = MaterialTheme.typography.titleMedium)
                                     }
@@ -1092,7 +1146,7 @@ fun ArticleScreen(
         modifier = Modifier.fillMaxSize().then(answerDoubleTapModifier),
     ) {
         // 根据模式渲染
-        if (article.type == ArticleType.Answer && articleSettings.answerSwitchMode == "vertical") {
+        if (article.type == ArticleType.Answer && answerSwitchMode == "vertical") {
             AnswerVerticalOverscroll(
                 previousAnswer = nav?.previousAnswer,
                 nextAnswer = nav?.nextAnswer,
@@ -1106,7 +1160,7 @@ fun ArticleScreen(
             ) {
                 MainContent()
             }
-        } else if (article.type == ArticleType.Answer && articleSettings.answerSwitchMode == "horizontal") {
+        } else if (article.type == ArticleType.Answer && answerSwitchMode == "horizontal") {
             AnswerHorizontalOverscroll(
                 canGoPrevious = nav?.previousAnswer != null,
                 canGoNext = nav?.nextAnswer != null,
@@ -1142,7 +1196,10 @@ fun ArticleScreen(
             val isAtTop by remember(scrollState) {
                 derivedStateOf { scrollState.value == 0 }
             }
-            val showSkipButton = !articleSettings.autoHideSkipAnswerButton || bottomBarState.isScrollingUp || isAtTop
+            val showSkipButton = touchExplorationEnabled ||
+                !articleSettings.autoHideSkipAnswerButton ||
+                bottomBarState.isScrollingUp ||
+                isAtTop
             val skipButtonAlpha by animateFloatAsState(
                 targetValue = if (showSkipButton) 1f else 0f,
                 animationSpec = tween(200),
@@ -1153,7 +1210,7 @@ fun ArticleScreen(
                 if (fabClickCount > 0) {
                     delay(350)
                     if (fabClickCount >= 2) {
-                        isImmersiveMode = !isImmersiveMode
+                        toggleImmersiveMode()
                     } else {
                         if (showSkipButton) {
                             answerNavigationState.navigateToNext()
@@ -1163,7 +1220,9 @@ fun ArticleScreen(
                 }
             }
             DraggableRefreshButton(
-                modifier = Modifier.graphicsLayer { alpha = skipButtonAlpha },
+                modifier = Modifier
+                    .graphicsLayer { alpha = skipButtonAlpha }
+                    .then(if (showSkipButton) Modifier else Modifier.clearAndSetSemantics {}),
                 onClick = { fabClickCount++ },
                 preferenceName = "buttonSkipAnswer",
             ) {
@@ -1197,8 +1256,10 @@ fun ArticleScreen(
         onSetImmersiveDoubleTap = {
             showActionsMenu = false
             // 沉浸式模式下，按返回键优先退出沉浸式，不会直接退出回答
-            isImmersiveMode = !isImmersiveMode
-            userMessages.showMessage("已进入沉浸式，按返回键即可退出")
+            toggleImmersiveMode()
+            if (isImmersiveMode) {
+                userMessages.showMessage("已进入沉浸式，按返回键即可退出")
+            }
         },
     )
 
@@ -1324,7 +1385,7 @@ fun ArticleScreen(
                     onClick = {
                         showDoubleTapActionDialog = false
                         articleSettings.saveAnswerDoubleTapAction(AnswerDoubleTapAction.ToggleImmersive)
-                        isImmersiveMode = !isImmersiveMode
+                        toggleImmersiveMode()
                         userMessages.showMessage("已将双击回答动作设为：${AnswerDoubleTapAction.ToggleImmersive.label}")
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -1364,7 +1425,9 @@ private fun ArticleAuthorFollowButton(
         onClick = onClick,
         enabled = !changing,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-        modifier = Modifier.testTag(ARTICLE_AUTHOR_FOLLOW_TAG),
+        modifier = Modifier
+            .testTag(ARTICLE_AUTHOR_FOLLOW_TAG)
+            .semantics { selected = following },
     ) {
         Text(
             text = if (following) "已关注" else "关注",

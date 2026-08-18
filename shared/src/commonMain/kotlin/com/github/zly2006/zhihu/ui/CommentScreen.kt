@@ -114,6 +114,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -670,7 +674,9 @@ fun CommentScreen(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { paneTitle = "评论" },
     ) {
         // 评论内容区域
         Surface(
@@ -1261,11 +1267,11 @@ private fun CommentItem(
             // 头像
             AsyncImage(
                 model = commentData.author.avatarUrl,
-                contentDescription = "头像",
+                contentDescription = null,
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .clickable { navigator.onNavigate(authorPerson) },
+                    .clickable(onClickLabel = "打开个人主页") { navigator.onNavigate(authorPerson) },
                 contentScale = ContentScale.Crop,
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -1283,7 +1289,7 @@ private fun CommentItem(
                         fontSize = 16.sp,
                         modifier = Modifier
                             .testTag("comment_author_${commentData.id}")
-                            .clickable { navigator.onNavigate(authorPerson) },
+                            .clickable(onClickLabel = "打开个人主页") { navigator.onNavigate(authorPerson) },
                     )
 
                     val authorTag = comment.item.authorTag
@@ -1312,7 +1318,7 @@ private fun CommentItem(
                             fontSize = 16.sp,
                             modifier = Modifier
                                 .testTag("comment_reply_to_author_${commentData.id}")
-                                .clickable {
+                                .clickable(onClickLabel = "打开个人主页") {
                                     navigator.onNavigate(
                                         Person(
                                             id = replyToAuthor.id,
@@ -1493,7 +1499,11 @@ private fun CommentItem(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .testTag("comment_like_button_${commentData.id}")
-                    .clickable(enabled = !isLikeLoading) { toggleLike() },
+                    .clickable(enabled = !isLikeLoading) { toggleLike() }
+                    .semantics {
+                        contentDescription = if (isLiked) "取消点赞" else "点赞"
+                        stateDescription = if (isLiked) "已点赞，$likeCount" else "$likeCount"
+                    },
             ) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
@@ -1502,7 +1512,7 @@ private fun CommentItem(
                     } else {
                         Icons.Outlined.ThumbUp
                     },
-                    contentDescription = "点赞",
+                    contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = if (isLiked) {
                         MaterialTheme.colorScheme.primary
