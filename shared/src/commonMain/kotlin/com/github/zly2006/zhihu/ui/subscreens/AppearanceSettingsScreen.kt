@@ -590,11 +590,12 @@ fun AppearanceSettingsScreen(
                         Slider(
                             value = fontSize.toFloat(),
                             onValueChange = {
-                                fontSize = it.toInt()
-                                settings.putInt(PREF_FONT_SIZE, it.toInt())
+                                val size = (it / 5).roundToInt() * 5
+                                fontSize = size
+                                settings.putInt(PREF_FONT_SIZE, size)
                             },
                             valueRange = 50f..200f,
-                            steps = 14,
+                            steps = 29,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         )
                     },
