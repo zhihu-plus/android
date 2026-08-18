@@ -2,12 +2,12 @@ package com.github.zly2006.zhihu
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -72,22 +72,26 @@ class PrivateMessageScreenInstrumentedTest {
         }
         composeRule.onNodeWithText(messageText).assertIsDisplayed()
         composeRule.waitUntil("长按后应出现可选中文本", timeoutMillis = 15_000) {
-            if (!hasSelectedPrivateMessageText(messageText)) {
-                composeRule.onNodeWithText(messageText, useUnmergedTree = true)
-                    .performTouchInput { longClick(center) }
+            if (!hasSelectedPrivateMessageText()) {
+                composeRule
+                    .onNodeWithText(messageText, useUnmergedTree = true)
+                    .performTouchInput { longClick(center, durationMillis = 1_500) }
             }
-            hasSelectedPrivateMessageText(messageText)
+            hasSelectedPrivateMessageText()
         }
-        assertTrue(hasSelectedPrivateMessageText(messageText))
+        assertTrue(hasSelectedPrivateMessageText())
     }
 
-    private fun hasSelectedPrivateMessageText(messageText: String): Boolean =
-        composeRule.onAllNodesWithText(messageText, useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .any { node ->
-                val range = node.config.getOrNull(SemanticsProperties.TextSelectionRange)
-                range != null && range.length > 0
-            }
+    private fun hasSelectedPrivateMessageText(): Boolean =
+        composeRule
+            .onAllNodes(
+                SemanticsMatcher("has non-empty text selection") { node ->
+                    val range = node.config.getOrNull(SemanticsProperties.TextSelectionRange)
+                    range != null && range.length > 0
+                },
+                useUnmergedTree = true,
+            ).fetchSemanticsNodes()
+            .isNotEmpty()
 
     private companion object {
         const val PEER_ID = "peer-copy"
