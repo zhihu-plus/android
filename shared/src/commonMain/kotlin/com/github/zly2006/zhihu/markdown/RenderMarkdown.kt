@@ -331,7 +331,7 @@ private fun RenderMarkdownDocument(
         },
         LocalSegmentActionSheetHost provides { state -> segmentActionSheetState = state },
     ) {
-        SegmentHighlightInteractionHost {
+        SegmentHighlightInteractionHost(document) {
             Box(modifier = modifier) {
                 NoDoubleClickSelectionScope {
                     val onLinkClick: (String) -> Unit = { url ->
