@@ -92,6 +92,7 @@ import com.github.zly2006.zhihu.viewmodel.filter.contentFilterSettings
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.cache.HttpCache
@@ -220,8 +221,7 @@ open class SharedAndroidPaginationEnvironment(
 
     override fun mobileHomeFeedHttpClient(): HttpClient {
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)
-
-        return HttpClient {
+        val configure: HttpClientConfig<*>.() -> Unit = {
             install(ContentNegotiation) {
                 json(json)
             }
@@ -237,6 +237,7 @@ open class SharedAndroidPaginationEnvironment(
                 }
             }
         }
+        return HttpClient(configure)
     }
 
     override fun aigcVoteClient(): AigcVoteClient? =
