@@ -220,6 +220,11 @@ open class SharedAndroidPaginationEnvironment(
     }
 
     override fun mobileHomeFeedHttpClient(): HttpClient {
+        // 生产路径需要 Android UA/headers；测试路径必须走 AccountData 的 MockEngine，
+        // 否则 HomeNotificationPixelInstrumentedTest 等拦不到未读角标请求。
+        if (AccountData.isHttpClientFactoryOverriddenForTesting()) {
+            return AccountData.httpClient(context)
+        }
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)
         val configure: HttpClientConfig<*>.() -> Unit = {
             install(ContentNegotiation) {
