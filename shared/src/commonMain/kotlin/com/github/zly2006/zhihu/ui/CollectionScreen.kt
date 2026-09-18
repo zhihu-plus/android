@@ -94,7 +94,8 @@ fun CollectionScreen(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding),
+            // 只吃父 Scaffold 底栏 inset，避免 TopAppBar 再叠一层状态栏间距。
+            .padding(bottom = contentPadding.calculateBottomPadding()),
         topBar = {
             TopAppBar(
                 title = {
