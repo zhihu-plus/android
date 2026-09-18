@@ -116,6 +116,9 @@ class AppearanceSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
         waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = !systemEnabled)
 
+        // 开启老年模式会放大 LocalDensity，布局重排后开关可能离开可视区，二次点击前重新滚入。
+        composeRule.waitForIdle()
+        scrollUntilTagDisplayed(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
         waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = systemEnabled)
     }
