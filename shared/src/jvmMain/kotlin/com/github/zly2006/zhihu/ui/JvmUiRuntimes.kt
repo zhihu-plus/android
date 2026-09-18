@@ -42,7 +42,9 @@ import com.github.zly2006.zhihu.markdown.RenderMarkdown
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.notification.NotificationSettingsStore
 import com.github.zly2006.zhihu.platform.UserMessageSink
+import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.ui.subscreens.DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.subscreens.desktopVersionName
 import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.viewmodel.DesktopPaginationEnvironment
@@ -384,6 +386,8 @@ actual fun ArticleWebViewContent(
         enableScroll = false,
         header = {},
         footer = {},
+        useTiqianRenderer = rememberSettingsStore()
+            .getBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, false),
     )
 }
 

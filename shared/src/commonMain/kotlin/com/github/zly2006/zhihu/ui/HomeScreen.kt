@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -89,6 +90,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -97,10 +99,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
+import com.github.zly2006.zhihu.data.MOBILE_NOTIFICATION_MESSAGE_URL
+import com.github.zly2006.zhihu.data.MobileNotificationMessageOverview
 import com.github.zly2006.zhihu.data.RecommendationMode
-import com.github.zly2006.zhihu.data.ZHIHU_ME_URL
 import com.github.zly2006.zhihu.data.ZhihuJson
-import com.github.zly2006.zhihu.data.ZhihuMeNotifications
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.Article
@@ -154,6 +156,8 @@ import com.github.zly2006.zhihu.viewmodel.local.LocalHomeFeedViewModel
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.za.AndroidHomeFeedViewModel
 import com.github.zly2006.zhihu.viewmodel.za.MixedHomeFeedViewModel
+import io.ktor.client.call.body
+import io.ktor.client.request.get
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -164,6 +168,7 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 import kotlinx.io.writeString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -180,6 +185,7 @@ const val HOME_WRITE_QUESTION_BUTTON_TAG = "home_write_question_button"
 const val HOME_WRITE_ANSWER_BUTTON_TAG = "home_write_answer_button"
 const val HOME_WRITE_PIN_BUTTON_TAG = "home_write_pin_button"
 const val HOME_NOTIFICATION_BUTTON_TAG = "home_notification_button"
+const val HOME_NOTIFICATION_BADGE_TAG = "home_notification_badge"
 const val HOME_ACCOUNT_BUTTON_TAG = "home_account_button"
 const val HOME_FEED_LIST_TAG = "home_feed_list"
 const val HOME_REFRESH_BUTTON_TAG = "home_refresh_button"
@@ -291,14 +297,15 @@ fun HomeScreen(
         cachedScrollToTopTrigger = scrollToTopTrigger
     }
 
-    // 通知 ViewModel
     var unreadCount by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         try {
             unreadCount = paginationEnvironment
-                .fetchJson(ZHIHU_ME_URL, "")
-                ?.let { ZhihuJson.decodeJson<ZhihuMeNotifications>(it) }
-                ?.totalCount ?: 0
+                .mobileHomeFeedHttpClient()
+                .get("$MOBILE_NOTIFICATION_MESSAGE_URL?limit=20")
+                .body<JsonObject>()
+                .let { ZhihuJson.decodeJson<MobileNotificationMessageOverview>(it) }
+                .totalUnreadCount
         } catch (_: Exception) {
             // 忽略错误
         }
@@ -562,22 +569,33 @@ fun HomeScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(
-                                onClick = { navigator.onNavigate(Notification) },
-                                modifier = Modifier.testTag(HOME_NOTIFICATION_BUTTON_TAG),
-                            ) {
-                                BadgedBox(
-                                    badge = {
-                                        if (showUnreadBadge && unreadCount > 0) {
-                                            Badge { Text("$unreadCount") }
-                                        }
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .testTag(HOME_NOTIFICATION_BUTTON_TAG)
+                                    .clickable(role = Role.Button) {
+                                        navigator.onNavigate(Notification)
                                     },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                // IconButton 的圆形 Surface 会裁掉越过圆形边界的 badge；点击盒与内容盒必须分离。
+                                Box(
+                                    modifier = Modifier.size(40.dp),
+                                    contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
                                         Icons.Default.Notifications,
                                         contentDescription = "通知",
                                         tint = MaterialTheme.colorScheme.onSurface,
                                     )
+                                    if (showUnreadBadge && unreadCount > 0) {
+                                        Badge(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .offset(x = 4.dp, y = (-4).dp)
+                                                .testTag(HOME_NOTIFICATION_BADGE_TAG),
+                                        ) { Text("$unreadCount") }
+                                    }
                                 }
                             }
                         }

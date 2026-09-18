@@ -137,6 +137,10 @@ object AccountData {
         httpClientFactoryOverride = factory
     }
 
+    /** Instrumented tests install ZhihuMockApi via [overrideHttpClientFactoryForTesting]. */
+    @Synchronized
+    fun isHttpClientFactoryOverriddenForTesting(): Boolean = httpClientFactoryOverride != null
+
     fun httpClient(context: Context, cookies: MutableMap<String, String>? = null): HttpClient {
         if (cookies != null) {
             return httpClientFactoryOverride?.invoke(context, cookies)

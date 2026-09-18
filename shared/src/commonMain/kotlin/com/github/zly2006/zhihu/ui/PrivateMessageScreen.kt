@@ -52,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -63,12 +64,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
-import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.data.ZhihuPrivateMessage
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Notification
+import com.github.zly2006.zhihu.navigation.resolveContent
 import com.github.zly2006.zhihu.notification.rememberNotificationSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.platform.rememberZhihuWebUrlOpener
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
 import com.github.zly2006.zhihu.util.formatRelativeTime
@@ -215,11 +217,14 @@ private fun PrivateMessageBubble(
     message: ZhihuPrivateMessage,
     incoming: Boolean,
 ) {
-    val displayText = (
-        message.plugin?.excerpt?.takeIf { it.isNotBlank() }
-            ?: message.content.takeIf { it.isNotBlank() }
-    )?.let { Ksoup.parse(it).text() }
-        ?: "暂不支持显示这条消息"
+    val navigator = LocalNavigator.current
+    val openWebUrl = rememberZhihuWebUrlOpener()
+    val linkColor = MaterialTheme.colorScheme.primary
+    val displayText = remember(message.content, message.plugin, linkColor, navigator, openWebUrl) {
+        message.displayContent(linkColor) { url ->
+            resolveContent(url)?.let(navigator.onNavigate) ?: openWebUrl(url)
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -262,6 +267,7 @@ private fun PrivateMessageBubble(
                         text = displayText,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier
+                            .commentSelectionWorkaround()
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                             .testTag("$PRIVATE_MESSAGE_BODY_TAG_PREFIX${message.stableId}"),
                     )

@@ -84,6 +84,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.github.zly2006.zhihu.markdown.TiqianBrandTitle
+import com.github.zly2006.zhihu.markdown.isTiqianMarkdownRendererAvailable
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.Daily
 import com.github.zly2006.zhihu.navigation.Follow
@@ -99,12 +101,14 @@ import com.github.zly2006.zhihu.theme.ELDERLY_MODE_PREFERENCE_KEY
 import com.github.zly2006.zhihu.theme.ThemeManager
 import com.github.zly2006.zhihu.theme.ThemeMode
 import com.github.zly2006.zhihu.theme.rememberElderlyModeEnabled
+import com.github.zly2006.zhihu.theme.rememberSystemElderlyModeEnabled
 import com.github.zly2006.zhihu.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.AnswerDoubleTapAction
 import com.github.zly2006.zhihu.ui.components.ANSWER_SWITCH_SENSITIVITY_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.components.ColorPickerDialog
 import com.github.zly2006.zhihu.ui.components.DEFAULT_ANSWER_SWITCH_SENSITIVITY
+import com.github.zly2006.zhihu.ui.components.DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.components.MAX_ANSWER_SWITCH_SENSITIVITY
 import com.github.zly2006.zhihu.ui.components.MIN_ANSWER_SWITCH_SENSITIVITY
 import com.github.zly2006.zhihu.ui.components.SettingItem
@@ -118,6 +122,8 @@ import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
 const val DUO3_CARD_LARGE_TITLE_PREFERENCE_KEY = "duo3_card_large_title"
+const val DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY = "duo3_tiqian_markdown"
+const val DUO3_TIQIAN_MATH_FONT_PREFERENCE_KEY = "duo3_tiqian_math_font"
 const val PREF_FONT_SIZE = "contentFontSize"
 const val PREF_LINE_HEIGHT = "contentLineHeight"
 const val PREF_BLOCK_SPACING = "contentBlockSpacing"
@@ -128,11 +134,13 @@ const val APPEARANCE_SETTINGS_START_DESTINATION_TAG = "appearanceSettings.startD
 const val APPEARANCE_SETTINGS_ANSWER_DOUBLE_TAP_TAG = "appearanceSettings.answerDoubleTap"
 const val APPEARANCE_SETTINGS_ANSWER_SWITCH_SENSITIVITY_TAG = "appearanceSettings.answerSwitchSensitivity"
 const val APPEARANCE_SETTINGS_USE_WEBVIEW_TAG = "appearanceSettings.useWebView"
+const val APPEARANCE_SETTINGS_TIQIAN_MARKDOWN_TAG = "appearanceSettings.tiqianMarkdown"
 const val APPEARANCE_SETTINGS_WEBVIEW_FONT_TAG = "appearanceSettings.webViewFont"
 const val APPEARANCE_SETTINGS_WEBVIEW_OPTIONS_TAG = "appearanceSettings.webViewOptions"
 const val APPEARANCE_SETTINGS_BOTTOM_BAR_SECTION_KEY = "appearanceSettings.bottomBarSection"
 const val APPEARANCE_SETTINGS_COLLECTION_DIRECT_BROWSE_TAG = "appearanceSettings.collectionDirectBrowse"
 const val APPEARANCE_SETTINGS_ELDERLY_MODE_TAG = "appearanceSettings.elderlyMode"
+const val APPEARANCE_SETTINGS_DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_TAG = "appearanceSettings.disableBottomSheetRoundedCorners"
 
 const val START_DESTINATION_PREFERENCE_KEY = "startDestination"
 const val BOTTOM_BAR_ITEMS_PREFERENCE_KEY = "bottom_bar_items"
@@ -542,6 +550,23 @@ fun AppearanceSettingsScreen(
                     )
                 }
 
+                val disableBottomSheetRoundedCorners = remember {
+                    mutableStateOf(settings.getBoolean(DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_PREFERENCE_KEY, false))
+                }
+                SettingItemWithSwitch(
+                    modifier = Modifier.testTag(APPEARANCE_SETTINGS_DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_TAG),
+                    title = { Text("禁用 popup 圆角") },
+                    description = { Text("开启后，评论等 popup 顶部不再显示圆角。") },
+                    checked = disableBottomSheetRoundedCorners.value,
+                    onCheckedChange = {
+                        disableBottomSheetRoundedCorners.value = it
+                        settings.putBoolean(DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_PREFERENCE_KEY, it)
+                    },
+                    settingKey = DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_PREFERENCE_KEY,
+                    highlightedKey = settingKey,
+                    bringIntoViewRequester = requesterFor(DISABLE_BOTTOM_SHEET_ROUNDED_CORNERS_PREFERENCE_KEY),
+                )
+
                 var fabOpacity by remember {
                     mutableIntStateOf(settings.getInt(PREF_FAB_OPACITY, DEFAULT_FAB_OPACITY))
                 }
@@ -567,13 +592,25 @@ fun AppearanceSettingsScreen(
             SettingItemGroup(
                 title = "阅读",
             ) {
-                val elderlyMode = rememberElderlyModeEnabled()
+                val systemElderlyMode = rememberSystemElderlyModeEnabled()
+                val elderlyModeEffective = rememberElderlyModeEnabled()
+                val elderlyModeChecked = remember {
+                    mutableStateOf(settings.getBoolean(ELDERLY_MODE_PREFERENCE_KEY, systemElderlyMode))
+                }
+                // 外部（系统或其它入口）改动时同步开关显示；本页点击直接改本地状态，避免依赖
+                // observeKeyChanges 跨 density 重组后才刷新导致连点写回同一值。
+                LaunchedEffect(elderlyModeEffective) {
+                    elderlyModeChecked.value = elderlyModeEffective
+                }
                 SettingItemWithSwitch(
                     modifier = Modifier.testTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG),
                     title = { Text("老年模式") },
                     description = { Text("系统老年模式开启时默认打开，放大界面文字。也可手动开关。") },
-                    checked = elderlyMode,
-                    onCheckedChange = { settings.putBoolean(ELDERLY_MODE_PREFERENCE_KEY, it) },
+                    checked = elderlyModeChecked.value,
+                    onCheckedChange = {
+                        elderlyModeChecked.value = it
+                        settings.putBoolean(ELDERLY_MODE_PREFERENCE_KEY, it)
+                    },
                     settingKey = ELDERLY_MODE_PREFERENCE_KEY,
                     highlightedKey = settingKey,
                     bringIntoViewRequester = requesterFor(ELDERLY_MODE_PREFERENCE_KEY),
@@ -1396,8 +1433,18 @@ fun AppearanceSettingsScreen(
             }
             val duo3ArticleBar = remember { mutableStateOf(settings.getBoolean("duo3_article_bar", false)) }
             val duo3ArticleActions = remember { mutableStateOf(settings.getBoolean("duo3_article_actions", false)) }
+            val duo3TiqianMarkdown = remember {
+                mutableStateOf(settings.getBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, false))
+            }
+            val duo3TiqianMathFont = remember {
+                mutableStateOf(settings.getString(DUO3_TIQIAN_MATH_FONT_PREFERENCE_KEY, "lete"))
+            }
 
             fun enableAllSubs() {
+                if (isTiqianMarkdownRendererAvailable) {
+                    settings.putBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, true)
+                    duo3TiqianMarkdown.value = true
+                }
                 settings.putBoolean("duo3_home_account", true)
                 settings.putBoolean("duo3_card_appearance", true)
                 settings.putBoolean("duo3_card_layout", true)
@@ -1422,6 +1469,10 @@ fun AppearanceSettingsScreen(
             }
 
             fun disableAllSubs() {
+                if (isTiqianMarkdownRendererAvailable) {
+                    settings.putBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, false)
+                    duo3TiqianMarkdown.value = false
+                }
                 settings.putBoolean("duo3_home_account", false)
                 settings.putBoolean("duo3_card_appearance", false)
                 settings.putBoolean("duo3_card_layout", false)
@@ -1476,6 +1527,34 @@ fun AppearanceSettingsScreen(
                     )
                 },
             ) {
+                if (isTiqianMarkdownRendererAvailable) {
+                    SettingItemWithSwitch(
+                        modifier = Modifier.testTag(APPEARANCE_SETTINGS_TIQIAN_MARKDOWN_TAG),
+                        title = { TiqianBrandTitle(prefix = "正文：使用", suffix = " Markdown 渲染器") },
+                        description = { Text("使用「提椠」段落书写器排版正文：段落两端对齐，改进中西混排间距、代码、表格、公式与脚注等样式，接近纸质书的排版效果。作用于文章、想法与问题详情。实验功能。") },
+                        checked = duo3TiqianMarkdown.value,
+                        onCheckedChange = {
+                            duo3TiqianMarkdown.value = it
+                            settings.putBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, it)
+                        },
+                        settingKey = DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY,
+                        highlightedKey = settingKey,
+                        bringIntoViewRequester = requesterFor(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY),
+                    )
+                    AnimatedVisibility(visible = duo3TiqianMarkdown.value) {
+                        SettingItemWithSwitch(
+                            title = { Text("正文：使用非衬线数学字体") },
+                            description = { Text("默认公式使用非衬线的 Lete Sans Math；关闭后改用衬线的 STIX Two Math。") },
+                            checked = duo3TiqianMathFont.value == "lete",
+                            onCheckedChange = {
+                                val fontId = if (it) "lete" else "stix"
+                                duo3TiqianMathFont.value = fontId
+                                settings.putString(DUO3_TIQIAN_MATH_FONT_PREFERENCE_KEY, fontId)
+                            },
+                        )
+                    }
+                }
+
                 SettingItemWithSwitch(
                     title = { Text("主页：账号入口迁移至顶部头像") },
                     description = { Text("搜索栏样式变更；点击头像弹出账号与设置；「历史」入口可挪入账号设置页。") },

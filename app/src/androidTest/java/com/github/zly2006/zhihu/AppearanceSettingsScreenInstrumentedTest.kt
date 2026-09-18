@@ -116,6 +116,14 @@ class AppearanceSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
         waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = !systemEnabled)
 
+        // 开启老年模式会放大 LocalDensity，原页面布局可能无法再滚到开关。
+        // 与 WebView 开关测试一样，保留偏好后重新挂载设置页再切回。
+        setUpScreen(
+            setting = ELDERLY_MODE_PREFERENCE_KEY,
+            resetPreferences = false,
+        )
+        waitUntilTagExists(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
+        scrollUntilTagDisplayed(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG)
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_ELDERLY_MODE_TAG).performClick()
         waitUntilBooleanPreference(ELDERLY_MODE_PREFERENCE_KEY, expected = systemEnabled)
     }

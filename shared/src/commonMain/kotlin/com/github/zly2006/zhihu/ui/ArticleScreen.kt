@@ -1096,6 +1096,7 @@ fun ArticleScreen(
                                     scrollState = scrollState,
                                     selectable = true,
                                     enableScroll = false,
+                                    useTiqianRenderer = articleSettings.useTiqianMarkdown,
                                     header = {},
                                     footer = {
                                         ArticleVideoAttachmentContent(viewModel.attachment)
@@ -1165,10 +1166,10 @@ fun ArticleScreen(
                 onNavigatePrevious = answerNavigationState::navigateToPrevious,
                 onNavigateNext = answerNavigationState::navigateToNext,
                 previousContent = nav?.previousAnswer?.let { cached ->
-                    { CachedAnswerPreview(cached) }
+                    { CachedAnswerPreview(cached, articleSettings.useTiqianMarkdown) }
                 },
                 nextContent = nav?.nextAnswer?.let { cached ->
-                    { CachedAnswerPreview(cached) }
+                    { CachedAnswerPreview(cached, articleSettings.useTiqianMarkdown) }
                 },
                 answerSwitchSensitivity = articleSettings.answerSwitchSensitivity,
             ) {

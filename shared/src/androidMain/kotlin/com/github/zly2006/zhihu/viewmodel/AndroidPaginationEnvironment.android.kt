@@ -54,6 +54,7 @@ import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_DELETE_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_FORWARD_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.LOCAL_ARCHIVE_SAVE_STRATEGY_PREFERENCE_KEY
+import com.github.zly2006.zhihu.data.QualityFilterSettings
 import com.github.zly2006.zhihu.data.ZhihuCookieStorage
 import com.github.zly2006.zhihu.data.ZhihuJson.json
 import com.github.zly2006.zhihu.data.createArchiveClient
@@ -91,6 +92,7 @@ import com.github.zly2006.zhihu.viewmodel.filter.contentFilterSettings
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
 import io.ktor.client.HttpClient
+import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.cache.HttpCache
@@ -218,9 +220,13 @@ open class SharedAndroidPaginationEnvironment(
     }
 
     override fun mobileHomeFeedHttpClient(): HttpClient {
+        // 生产路径需要 Android UA/headers；测试路径必须走 AccountData 的 MockEngine，
+        // 否则 HomeNotificationPixelInstrumentedTest 等拦不到未读角标请求。
+        if (AccountData.isHttpClientFactoryOverriddenForTesting()) {
+            return AccountData.httpClient(context)
+        }
         val loginForRecommendation = settingsStore.getBoolean("loginForRecommendation", true)
-
-        return HttpClient {
+        val configure: HttpClientConfig<*>.() -> Unit = {
             install(ContentNegotiation) {
                 json(json)
             }
@@ -236,6 +242,7 @@ open class SharedAndroidPaginationEnvironment(
                 }
             }
         }
+        return HttpClient(configure)
     }
 
     override fun aigcVoteClient(): AigcVoteClient? =
@@ -352,6 +359,15 @@ open class SharedAndroidPaginationEnvironment(
         qualityFilterMode = QualityFilterMode.entries.firstOrNull {
             it.name == settingsStore.getString(QUALITY_FILTER_MODE_PREFERENCE_KEY, QualityFilterMode.RULES.name)
         } ?: QualityFilterMode.RULES,
+        qualityFilter = QualityFilterSettings(
+            answerVoteupCount = settingsStore.getInt(ANSWER_VOTEUP_THRESHOLD_PREFERENCE_KEY, 10).coerceAtLeast(0),
+            articleVoteupCount = settingsStore.getInt(ARTICLE_VOTEUP_THRESHOLD_PREFERENCE_KEY, 20).coerceAtLeast(0),
+            articleFollowersCount = settingsStore.getInt(ARTICLE_FOLLOWERS_THRESHOLD_PREFERENCE_KEY, 50).coerceAtLeast(0),
+            videoVoteCount = settingsStore.getInt(VIDEO_VOTE_THRESHOLD_PREFERENCE_KEY, 20).coerceAtLeast(0),
+            videoFollowersCount = settingsStore.getInt(VIDEO_FOLLOWERS_THRESHOLD_PREFERENCE_KEY, 50).coerceAtLeast(0),
+            questionAnswerCount = settingsStore.getInt(QUESTION_ANSWER_THRESHOLD_PREFERENCE_KEY, 5).coerceAtLeast(0),
+            questionFollowersCount = settingsStore.getInt(QUESTION_FOLLOWERS_THRESHOLD_PREFERENCE_KEY, 50).coerceAtLeast(0),
+        ),
         reverseBlock = settingsStore.getBoolean("reverseBlock", false),
     )
 
@@ -448,16 +464,20 @@ open class SharedAndroidPaginationEnvironment(
         recordContentOpenEvent(destination, questionId)
     }
 
-    override suspend fun applyHomeFeedFilters(items: List<FeedDisplayItem>): HomeFeedFilterResult {
-        val settings = feedDisplaySettings()
+    override suspend fun applyForegroundHomeFeedFilter(items: List<FeedDisplayItem>): List<FeedDisplayItem> {
         val filterSettings = context.contentFilterSettings()
         val filterDatabase = getContentFilterDatabase(context)
-        val foregroundItems = ForegroundReadFilterPipeline(
+        return ForegroundReadFilterPipeline(
             settings = filterSettings,
             contentFilterManager = ContentFilterManager(filterDatabase.contentFilterDao()),
             blockedFeedRecordDao = filterDatabase.blockedFeedRecordDao(),
         ).filter(items)
-        val filteredItems = FeedDisplayFilterPipeline(
+    }
+
+    override suspend fun applyBackgroundHomeFeedFilter(items: List<FeedDisplayItem>): List<FeedDisplayItem> {
+        val filterSettings = context.contentFilterSettings()
+        val filterDatabase = getContentFilterDatabase(context)
+        return FeedDisplayFilterPipeline(
             settings = filterSettings,
             contentDetailProvider = this::getOrFetchContentDetail,
             contentFilterPipeline = FeedContentFilterPipeline(
@@ -486,12 +506,7 @@ open class SharedAndroidPaginationEnvironment(
             onDetailsKeywordFiltered = { item, keyword ->
                 Log.e("ContentFilterExtensions", "Filtered item '${item.title}' due to keyword '$keyword' in details: ${item.content}")
             },
-        ).filter(foregroundItems)
-        return HomeFeedFilterResult(
-            foregroundItems = foregroundItems,
-            filteredItems = filteredItems,
-            reverseBlock = settings.reverseBlock,
-        )
+        ).filter(items)
     }
 
     override suspend fun recordContentInteraction(feed: Feed) {
