@@ -20,7 +20,9 @@ package com.github.zly2006.zhihu.ui
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -64,11 +67,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.lifecycle.ViewModel
 import coil3.compose.AsyncImage
 import com.fleeksoft.ksoup.Ksoup
@@ -117,6 +129,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.jetbrains.compose.resources.painterResource
 import zhihu.shared.generated.resources.Res
 import zhihu.shared.generated.resources.ic_zh_plus_author_badge
+import kotlin.math.roundToInt
 import kotlin.reflect.typeOf
 import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import com.github.zly2006.zhihu.navigation.Search as SearchDestination
@@ -703,6 +716,13 @@ fun PeopleScreen(
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    var expandedHeaderHeightPx by remember { mutableIntStateOf(0) }
+    LaunchedEffect(expandedHeaderHeightPx) {
+        if (expandedHeaderHeightPx > 0) {
+            scrollBehavior.state.heightOffsetLimit = -expandedHeaderHeightPx.toFloat()
+        }
+    }
+    val collapsedFraction = scrollBehavior.state.collapsedFraction
 
     Scaffold(
         modifier = Modifier
@@ -713,8 +733,11 @@ fun PeopleScreen(
             Box(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             ) {
-                TopAppBar(
-                    title = {
+                Column {
+                    CollapsibleHeader(
+                        collapsedFraction = collapsedFraction,
+                        onExpandedHeightChanged = { expandedHeaderHeightPx = it },
+                    ) {
                         UserInfoHeader(
                             viewModel = viewModel,
                             pagerState = pagerState,
@@ -760,12 +783,51 @@ fun PeopleScreen(
                                 }
                             },
                         )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors().copy(
-                        scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                    ),
-                    scrollBehavior = scrollBehavior,
-                    expandedHeight = 240.dp,
+                    }
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        modifier = Modifier.testTag(PEOPLE_SCREEN_TAB_ROW_TAG),
+                    ) {
+                        PEOPLE_SCREEN_TITLES.forEachIndexed { index, title ->
+                            Tab(
+                                selected = pagerState.currentPage == index,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
+                                modifier = Modifier.testTag("people_screen_tab_$index"),
+                            ) {
+                                Text(
+                                    text = title,
+                                    modifier = Modifier.padding(16.dp),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(y = lerp(240.dp, 0.dp, collapsedFraction))
+                        .size(width = 96.dp, height = 56.dp)
+                        .alpha(collapsedFraction)
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.surface),
+                            ),
+                        ).pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                    while (awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed }) {
+                                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                                    }
+                                }
+                            }
+                        },
                 )
                 if (viewModel.memberHashId.isNotBlank() && viewModel.memberHashId != Person.EMPTY_ID) {
                     IconButton(
@@ -780,7 +842,7 @@ fun PeopleScreen(
                         },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 32.dp, end = 8.dp)
+                            .padding(top = lerp(32.dp, 4.dp, collapsedFraction), end = 8.dp)
                             .testTag(PEOPLE_SCREEN_SEARCH_BUTTON_TAG),
                     ) {
                         Icon(Icons.Default.Search, contentDescription = "搜索 TA 的创作")
@@ -794,29 +856,6 @@ fun PeopleScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 8.dp),
         ) {
-            PrimaryScrollableTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                modifier = Modifier.testTag(PEOPLE_SCREEN_TAB_ROW_TAG),
-            ) {
-                PEOPLE_SCREEN_TITLES.forEachIndexed { index, title ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(index)
-                            }
-                        },
-                        modifier = Modifier.testTag("people_screen_tab_$index"),
-                    ) {
-                        Text(
-                            text = title,
-                            modifier = Modifier.padding(16.dp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -1485,7 +1524,7 @@ private fun OfficialBadgeDetails(
                     text = "${badge.peopleDetailTitle}: ${badge.description}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -1551,6 +1590,27 @@ private fun SortBar(
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
+private fun CollapsibleHeader(
+    collapsedFraction: Float,
+    onExpandedHeightChanged: (Int) -> Unit,
+    content: @Composable () -> Unit,
+) {
+    SubcomposeLayout(modifier = Modifier.clipToBounds()) { constraints ->
+        val placeable = subcompose("header", content).single().measure(
+            constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity),
+        )
+        if (placeable.height > 0) {
+            onExpandedHeightChanged(placeable.height)
+        }
+        val height = (placeable.height * (1f - collapsedFraction)).roundToInt()
+        layout(constraints.maxWidth, height) {
+            placeable.place(0, 0)
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@Composable
 private fun UserInfoHeader(
     viewModel: PersonViewModel,
     pagerState: PagerState,
@@ -1601,76 +1661,53 @@ private fun UserInfoHeader(
                         )
                     }
                 }
-                Text(
-                    viewModel.headline,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                OfficialBadgeDetails(
-                    badges = viewModel.officialBadgeDetails,
-                    modifier = Modifier.padding(top = 6.dp),
-                )
-                viewModel.githubSocial?.let { githubSocial ->
-                    Row(
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .testTag(PEOPLE_SCREEN_GITHUB_STARS_TAG)
-                            .clickable { openExternalUrl(githubSocial.profileUrl) },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        githubSocial.iconUrl?.let { iconUrl ->
-                            AsyncImage(
-                                model = iconUrl,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
+                Column(
+                    modifier = Modifier.padding(end = 48.dp), // 空出来搜索按钮的位置。搜索按钮有独特的动画，不受排版约束。
+                ) {
+                    Text(
+                        viewModel.headline,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    OfficialBadgeDetails(
+                        badges = viewModel.officialBadgeDetails,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                    viewModel.githubSocial?.let { githubSocial ->
+                        Row(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .testTag(PEOPLE_SCREEN_GITHUB_STARS_TAG)
+                                .clickable { openExternalUrl(githubSocial.profileUrl) },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            githubSocial.iconUrl?.let { iconUrl ->
+                                AsyncImage(
+                                    model = iconUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Text(
+                                text = githubSocial.title,
+                                modifier = Modifier.weight(1f, fill = false),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = "· ${githubSocial.starCount} stars",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
                             )
                         }
-                        Text(
-                            text = githubSocial.title,
-                            modifier = Modifier.weight(1f, fill = false),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Text(
-                            text = "· ${githubSocial.starCount} stars",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
                     }
                 }
             }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-        ) {
-            StatItem("回答", viewModel.answerCount, onClick = {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(0)
-                }
-            }, tag = PEOPLE_SCREEN_ANSWER_COUNT_TAG)
-            StatItem("文章", viewModel.articleCount, onClick = {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(1)
-                }
-            }, tag = PEOPLE_SCREEN_ARTICLE_COUNT_TAG)
-            StatItem("粉丝", viewModel.followerCount, onClick = {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(7)
-                }
-            }, tag = PEOPLE_SCREEN_FOLLOWER_COUNT_TAG)
-            StatItem("关注", viewModel.followingCount, onClick = {
-                coroutineScope.launch {
-                    pagerState.animateScrollToPage(8)
-                }
-            }, tag = PEOPLE_SCREEN_FOLLOWING_COUNT_TAG)
         }
         FlowRow(
             modifier = Modifier
@@ -1703,6 +1740,33 @@ private fun UserInfoHeader(
             ) {
                 Text(if (viewModel.isBlockedAsQuestionAuthor) "取消屏蔽其提问" else "屏蔽其提问")
             }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+        ) {
+            StatItem("回答", viewModel.answerCount, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(0)
+                }
+            }, tag = PEOPLE_SCREEN_ANSWER_COUNT_TAG)
+            StatItem("文章", viewModel.articleCount, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(1)
+                }
+            }, tag = PEOPLE_SCREEN_ARTICLE_COUNT_TAG)
+            StatItem("粉丝", viewModel.followerCount, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(7)
+                }
+            }, tag = PEOPLE_SCREEN_FOLLOWER_COUNT_TAG)
+            StatItem("关注", viewModel.followingCount, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(8)
+                }
+            }, tag = PEOPLE_SCREEN_FOLLOWING_COUNT_TAG)
         }
     }
 }
