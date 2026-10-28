@@ -60,6 +60,7 @@ import com.github.zly2006.zhihu.util.buildArticleExportFileName
 import com.github.zly2006.zhihu.util.buildZhidaSummaryRequest
 import com.github.zly2006.zhihu.util.decodeZhidaAnswerData
 import com.github.zly2006.zhihu.util.decodeZhidaStreamErrorMessage
+import com.github.zly2006.zhihu.util.formatFullDateTime
 import com.github.zly2006.zhihu.util.mergeSummaryChunk
 import com.github.zly2006.zhihu.util.parseZhidaSsePayload
 import com.github.zly2006.zhihu.util.prepareArticleExportComment
@@ -86,8 +87,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.number
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -1161,7 +1160,7 @@ class ArticleViewModel(
                 prepareArticleExportComment(
                     authorName = comment.author.name,
                     content = comment.content,
-                    createdTimeText = formatArticleDateTime(comment.createdTime).dropLast(3),
+                    createdTimeText = formatFullDateTime(comment.createdTime).dropLast(3),
                 )
             }
     }
@@ -1193,24 +1192,6 @@ class ArticleViewModel(
         environment.setPlainTextClipboard("Zhihu Article", markdown)
 
         userMessages.showShortMessage("文章已复制到剪贴板")
-    }
-}
-
-fun formatArticleDateTime(seconds: Long): String {
-    val instant = kotlin.time.Instant.fromEpochSeconds(seconds)
-    val dateTime = instant.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
-    return buildString {
-        append(dateTime.year.toString().padStart(4, '0'))
-        append('-')
-        append(dateTime.month.number.twoDigitString())
-        append('-')
-        append(dateTime.day.twoDigitString())
-        append(' ')
-        append(dateTime.hour.twoDigitString())
-        append(':')
-        append(dateTime.minute.twoDigitString())
-        append(':')
-        append(dateTime.second.twoDigitString())
     }
 }
 
