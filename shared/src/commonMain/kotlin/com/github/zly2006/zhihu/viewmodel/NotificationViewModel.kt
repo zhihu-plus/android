@@ -381,7 +381,7 @@ class PrivateMessageViewModel(
             while (true) {
                 val json = client
                     .get(pageUrl.replace("http://", "https://"))
-                    .jsonObject()
+                    .body<JsonObject>()
                 val page = ZhihuJson.decodeJson<ZhihuPrivateMessagePage>(json)
                 if (generation != refreshGeneration) return
                 if (firstPagePaging == null) firstPagePaging = page.paging
