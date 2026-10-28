@@ -66,7 +66,6 @@ import com.github.zly2006.zhihu.util.parseZhidaSsePayload
 import com.github.zly2006.zhihu.util.prepareArticleExportComment
 import com.github.zly2006.zhihu.util.raiseForStatus
 import com.github.zly2006.zhihu.util.serializeZhidaSummaryRequest
-import com.github.zly2006.zhihu.util.twoDigitString
 import com.github.zly2006.zhihu.viewmodel.archive.LocalArchiveRecord
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body

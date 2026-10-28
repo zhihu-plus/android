@@ -506,167 +506,167 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                val shouldShowHistory = showSearchHistory.value && searchHistoryItems.isNotEmpty()
-                val shouldShowHotSearch = showHotSearch.value && hotSearchItems.isNotEmpty()
-                if (shouldShowHistory || shouldShowHotSearch) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
-                            .testTag("search_hot_list"),
-                    ) {
-                        if (shouldShowHistory) {
-                            SearchHistoryHeader(showClearAction = true)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            searchHistoryItems.forEach { query ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            keyboardController?.hide()
-                                            submitSearch(query)
-                                        }.padding(vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Default.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .width(28.dp)
-                                            .size(18.dp),
-                                    )
-                                    Text(
-                                        text = query,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(end = 8.dp),
-                                    )
-                                }
-                            }
-                            if (shouldShowHotSearch) {
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                        }
-
-                        if (shouldShowHotSearch) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    text = "热搜",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(
-                                        onClick = {
-                                            if (useTestHotSearchQueries) {
-                                                onTestHotSearchRefresh?.invoke()
-                                            } else {
-                                                coroutineScope.launch { runCatching { fetchHotSearch() } }
-                                            }
-                                        },
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .testTag("search_hot_refresh_button"),
-                                    ) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "刷新热搜", modifier = Modifier.size(18.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = { hotSearchMoreMenuExpanded = true },
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .testTag("search_hot_more_button"),
-                                    ) {
-                                        Icon(Icons.Default.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
-                                        DropdownMenu(
-                                            expanded = hotSearchMoreMenuExpanded,
-                                            onDismissRequest = { hotSearchMoreMenuExpanded = false },
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { Text("关闭热搜显示") },
-                                                onClick = {
-                                                    hotSearchMoreMenuExpanded = false
-                                                    navigator.onNavigate(Account.AppearanceSettings("showSearchHotSearch"))
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Column {
-                                hotSearchItems.forEachIndexed { index, item ->
+                    val shouldShowHistory = showSearchHistory.value && searchHistoryItems.isNotEmpty()
+                    val shouldShowHotSearch = showHotSearch.value && hotSearchItems.isNotEmpty()
+                    if (shouldShowHistory || shouldShowHotSearch) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp)
+                                .testTag("search_hot_list"),
+                        ) {
+                            if (shouldShowHistory) {
+                                SearchHistoryHeader(showClearAction = true)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                searchHistoryItems.forEach { query ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
                                                 keyboardController?.hide()
-                                                submitSearch(item.query)
+                                                submitSearch(query)
                                             }.padding(vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Text(
-                                            text = "${index + 1}",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = if (index < 3) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.width(28.dp),
+                                        Icon(
+                                            Icons.Default.Search,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .width(28.dp)
+                                                .size(18.dp),
                                         )
                                         Text(
-                                            text = item.query,
+                                            text = query,
                                             style = MaterialTheme.typography.bodyMedium,
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .padding(end = 8.dp),
                                         )
-                                        if (item.hotShow.isNotEmpty()) {
+                                    }
+                                }
+                                if (shouldShowHotSearch) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            }
+
+                            if (shouldShowHotSearch) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = "热搜",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = {
+                                                if (useTestHotSearchQueries) {
+                                                    onTestHotSearchRefresh?.invoke()
+                                                } else {
+                                                    coroutineScope.launch { runCatching { fetchHotSearch() } }
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .testTag("search_hot_refresh_button"),
+                                        ) {
+                                            Icon(Icons.Default.Refresh, contentDescription = "刷新热搜", modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        IconButton(
+                                            onClick = { hotSearchMoreMenuExpanded = true },
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .testTag("search_hot_more_button"),
+                                        ) {
+                                            Icon(Icons.Default.MoreVert, contentDescription = "更多", modifier = Modifier.size(18.dp))
+                                            DropdownMenu(
+                                                expanded = hotSearchMoreMenuExpanded,
+                                                onDismissRequest = { hotSearchMoreMenuExpanded = false },
+                                            ) {
+                                                DropdownMenuItem(
+                                                    text = { Text("关闭热搜显示") },
+                                                    onClick = {
+                                                        hotSearchMoreMenuExpanded = false
+                                                        navigator.onNavigate(Account.AppearanceSettings("showSearchHotSearch"))
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Column {
+                                    hotSearchItems.forEachIndexed { index, item ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    keyboardController?.hide()
+                                                    submitSearch(item.query)
+                                                }.padding(vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
                                             Text(
-                                                text = item.hotShow,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                text = "${index + 1}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = if (index < 3) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.width(28.dp),
                                             )
+                                            Text(
+                                                text = item.query,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(end = 8.dp),
+                                            )
+                                            if (item.hotShow.isNotEmpty()) {
+                                                Text(
+                                                    text = item.hotShow,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                } else {
-                    if (showSearchHistory.value || isMemberSearch) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                        ) {
-                            if (showSearchHistory.value) {
-                                SearchHistoryHeader(showClearAction = false)
-                                Spacer(modifier = Modifier.height(12.dp))
+                    } else {
+                        if (showSearchHistory.value || isMemberSearch) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                            ) {
+                                if (showSearchHistory.value) {
+                                    SearchHistoryHeader(showClearAction = false)
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                }
+                                Text(
+                                    text = if (isMemberSearch) {
+                                        "输入关键词搜索 $memberSearchName 的创作"
+                                    } else {
+                                        "暂无搜索历史，输入关键词搜索后会保存在这里"
+                                    },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                             }
+                        } else {
                             Text(
-                                text = if (isMemberSearch) {
-                                    "输入关键词搜索 $memberSearchName 的创作"
-                                } else {
-                                    "暂无搜索历史，输入关键词搜索后会保存在这里"
-                                },
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "请输入搜索内容",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                             )
                         }
-                    } else {
-                        Text(
-                            text = "请输入搜索内容",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                        )
                     }
-                }
                 }
             } else if (viewModel.searchTab != SearchTab.General) {
                 val resultListState = if (viewModel.searchTab == SearchTab.Topic) topicListState else peopleListState
