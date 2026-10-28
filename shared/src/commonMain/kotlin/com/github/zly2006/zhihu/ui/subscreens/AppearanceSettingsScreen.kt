@@ -118,6 +118,7 @@ import com.github.zly2006.zhihu.ui.components.SettingItemWithSwitch
 import com.github.zly2006.zhihu.ui.components.normalizedAnswerSwitchSensitivity
 import com.github.zly2006.zhihu.updater.ZHIHU_PLUS_PLUS_GITHUB_URL
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -147,6 +148,7 @@ const val BOTTOM_BAR_ITEMS_PREFERENCE_KEY = "bottom_bar_items"
 const val BOTTOM_BAR_ITEM_ORDER_PREFERENCE_KEY = "bottom_bar_item_order"
 const val COLLECTION_DIRECT_BROWSE_PREFERENCE_KEY = "collectionDirectBrowse"
 private const val BOTTOM_BAR_ITEM_ORDER_SEPARATOR = ","
+internal val contentFontSizeLevels = (50..120 step 5).toList() + (130..200 step 10).toList()
 private val bottomBarSettingItemHeight = 64.dp
 private val bottomBarSettingItemSpacing = 4.dp
 
@@ -616,7 +618,18 @@ fun AppearanceSettingsScreen(
                     bringIntoViewRequester = requesterFor(ELDERLY_MODE_PREFERENCE_KEY),
                 )
 
-                var fontSize by remember { mutableIntStateOf(settings.getInt(PREF_FONT_SIZE, 100)) }
+                var fontSize by remember {
+                    val storedValue = settings.getInt(PREF_FONT_SIZE, 100)
+                    val boundedValue = storedValue.coerceIn(
+                        contentFontSizeLevels.first(),
+                        contentFontSizeLevels.last(),
+                    )
+                    val snappedValue = contentFontSizeLevels.minBy { abs(it - boundedValue) }
+                    if (storedValue != snappedValue) {
+                        settings.putInt(PREF_FONT_SIZE, snappedValue)
+                    }
+                    mutableIntStateOf(snappedValue)
+                }
                 SettingItem(
                     title = { Text("字号") },
                     description = { Text("调整内容文字大小 ($fontSize%)") },
@@ -625,14 +638,14 @@ fun AppearanceSettingsScreen(
                     bringIntoViewRequester = requesterFor("fontScale"),
                     bottomAction = {
                         Slider(
-                            value = fontSize.toFloat(),
+                            value = contentFontSizeLevels.indexOf(fontSize).toFloat(),
                             onValueChange = {
-                                val size = (it / 5).roundToInt() * 5
-                                fontSize = size
-                                settings.putInt(PREF_FONT_SIZE, size)
+                                val levelIndex = it.roundToInt().coerceIn(0, contentFontSizeLevels.lastIndex)
+                                fontSize = contentFontSizeLevels[levelIndex]
+                                settings.putInt(PREF_FONT_SIZE, fontSize)
                             },
-                            valueRange = 50f..200f,
-                            steps = 29,
+                            valueRange = 0f..contentFontSizeLevels.lastIndex.toFloat(),
+                            steps = contentFontSizeLevels.size - 2,
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         )
                     },
