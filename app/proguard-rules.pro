@@ -61,6 +61,13 @@
     private ** descriptor;
 }
 
+# R8 会把 kotlinx.serialization.json 中空的 Companion 构造器内联掉，
+# 在 JsonObject 的 <clinit> 里对 Companion 执行 new-instance 后直接调用 Object.<init>。
+# 这段字节码不合法，ART 在类初始化时抛出 VerifyError（Verifier rejected class <混淆名>）。
+# 首页推荐一打开就会执行 body<JsonObject>()，因此应用启动即失败。
+# 保留整个 json 包，避免这些构造器被内联或删除。
+-keep class kotlinx.serialization.json.** { *; }
+
 -keepnames class ** implements com.github.zly2006.zhihu.data.Feed$Target
 # Keep all enums
 -keep enum ** {
